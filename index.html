@@ -1,170 +1,190 @@
-import React from 'react';
-import { 
-  Sparkles, 
-  Cat, 
-  Bomb, 
-  Castle, 
-  ShieldHalf, 
-  Swords, 
-  Keyboard, 
-  MoonStar, 
-  Footprints, 
-  Crown, 
-  Gamepad2,
-  Heart
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的可愛遊戲大廳</title>
+  
+  <!-- 載入 Tailwind CSS 來處理樣式 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 載入 Lucide Icons 來顯示可愛圖示 -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-// 遊戲資料設定，包含標題、連結、對應圖示與專屬馬卡龍配色
-const games = [
-  {
-    title: "御神籤",
-    url: "https://btosichen.github.io/Omikuji/",
-    icon: Sparkles,
-    color: "bg-pink-100 text-pink-500",
-    shadow: "hover:shadow-pink-200",
-    border: "border-pink-200"
-  },
-  {
-    title: "貓咪炸彈超人3D v1.1",
-    url: "https://btosichen.github.io/Catbomb3D/",
-    icon: Cat,
-    color: "bg-blue-100 text-blue-500",
-    shadow: "hover:shadow-blue-200",
-    border: "border-blue-200"
-  },
-  {
-    title: "炸彈超人",
-    url: "https://btosichen.github.io/Bombermanv1.3/",
-    icon: Bomb,
-    color: "bg-red-100 text-red-500",
-    shadow: "hover:shadow-red-200",
-    border: "border-red-200"
-  },
-  {
-    title: "塔防遊戲",
-    url: "https://btosichen.github.io/Tower-Defense-Games/",
-    icon: Castle,
-    color: "bg-green-100 text-green-500",
-    shadow: "hover:shadow-green-200",
-    border: "border-green-200"
-  },
-  {
-    title: "塔防遊戲 V1.0",
-    url: "https://btosichen.github.io/Tower-Defense-GamesV1.0/",
-    icon: ShieldHalf,
-    color: "bg-teal-100 text-teal-500",
-    shadow: "hover:shadow-teal-200",
-    border: "border-teal-200"
-  },
-  {
-    title: "三國塔防遊戲",
-    url: "https://btosichen.github.io/2026-Tower-Defense-Games/",
-    icon: Swords,
-    color: "bg-orange-100 text-orange-500",
-    shadow: "hover:shadow-orange-200",
-    border: "border-orange-200"
-  },
-  {
-    title: "英打練習",
-    url: "https://btosichen.github.io/typing/",
-    icon: Keyboard,
-    color: "bg-purple-100 text-purple-500",
-    shadow: "hover:shadow-purple-200",
-    border: "border-purple-200"
-  },
-  {
-    title: "塔羅牌",
-    url: "https://btosichen.github.io/TarotGame/",
-    icon: MoonStar,
-    color: "bg-indigo-100 text-indigo-500",
-    shadow: "hover:shadow-indigo-200",
-    border: "border-indigo-200"
-  },
-  {
-    title: "Running Man",
-    url: "https://btosichen.github.io/Running-Man/",
-    icon: Footprints,
-    color: "bg-yellow-100 text-yellow-600",
-    shadow: "hover:shadow-yellow-200",
-    border: "border-yellow-200"
-  },
-  {
-    title: "Queen-Meow",
-    url: "https://btosichen.github.io/Queen-Meow-V1.0/",
-    icon: Crown,
-    color: "bg-fuchsia-100 text-fuchsia-500",
-    shadow: "hover:shadow-fuchsia-200",
-    border: "border-fuchsia-200"
-  },
-  {
-    title: "Voxel-Cat-Survivor v2.0",
-    url: "https://btosichen.github.io/Voxel-Cat-Survivorv2.0/",
-    icon: Gamepad2,
-    color: "bg-cyan-100 text-cyan-500",
-    shadow: "hover:shadow-cyan-200",
-    border: "border-cyan-200"
-  }
-];
+  <style>
+    /* 基本字體設定 */
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
 
-export default function App() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8 font-sans selection:bg-pink-200 selection:text-pink-900">
-      
-      {/* 頁面標題區塊 */}
-      <div className="max-w-7xl mx-auto mb-12 text-center">
-        <div className="inline-flex items-center justify-center p-4 bg-white rounded-full shadow-sm mb-4 border-2 border-pink-100">
-          <Heart className="w-8 h-8 text-pink-400 animate-pulse" fill="currentColor" />
-        </div>
-        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800 tracking-tight mb-4 flex justify-center items-center gap-3">
-          <Sparkles className="w-8 h-8 text-yellow-400" />
-          我的可愛遊戲大廳
-          <Sparkles className="w-8 h-8 text-yellow-400" />
-        </h1>
-        <p className="text-lg text-gray-500 font-medium">
-          點擊下方可愛的遊戲卡片，立刻開始遊玩吧！ 🎮✨
-        </p>
+  <div class="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8 selection:bg-pink-200 selection:text-pink-900">
+    
+    <!-- 頁面標題區塊 -->
+    <div class="max-w-7xl mx-auto mb-12 text-center">
+      <div class="inline-flex items-center justify-center p-4 bg-white rounded-full shadow-sm mb-4 border-2 border-pink-100">
+        <!-- 愛心圖示 -->
+        <i data-lucide="heart" class="w-8 h-8 text-pink-400 animate-pulse" fill="currentColor"></i>
       </div>
-
-      {/* 遊戲列表網格 */}
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-          {games.map((game, index) => {
-            const IconComponent = game.icon;
-            return (
-              <a
-                key={index}
-                href={game.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`group block bg-white rounded-[2rem] p-6 text-center transition-all duration-300 ease-out hover:-translate-y-3 hover:shadow-xl ${game.shadow} border-2 border-transparent hover:${game.border}`}
-              >
-                {/* 可愛圖示容器 */}
-                <div className={`mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-[1.5rem] flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 ${game.color}`}>
-                  <IconComponent className="w-10 h-10 sm:w-12 sm:h-12" strokeWidth={2.5} />
-                </div>
-                
-                {/* 遊戲名稱 */}
-                <h3 className="text-gray-700 font-bold text-sm sm:text-base leading-tight group-hover:text-gray-900 transition-colors">
-                  {game.title}
-                </h3>
-                
-                {/* 裝飾性小圓點 */}
-                <div className="mt-3 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className={`w-1.5 h-1.5 rounded-full ${game.color.split(' ')[0]}`}></div>
-                  <div className={`w-1.5 h-1.5 rounded-full ${game.color.split(' ')[0]}`}></div>
-                  <div className={`w-1.5 h-1.5 rounded-full ${game.color.split(' ')[0]}`}></div>
-                </div>
-              </a>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 頁尾 */}
-      <div className="mt-16 text-center text-gray-400 text-sm font-medium">
-        <p>Have fun & Enjoy gaming! 🐾</p>
-      </div>
-      
+      <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 tracking-tight mb-4 flex justify-center items-center gap-3">
+        <i data-lucide="sparkles" class="w-8 h-8 text-yellow-400"></i>
+        我的可愛遊戲大廳
+        <i data-lucide="sparkles" class="w-8 h-8 text-yellow-400"></i>
+      </h1>
+      <p class="text-lg text-gray-500 font-medium">
+        點擊下方可愛的遊戲卡片，立刻開始遊玩吧！ 🎮✨
+      </p>
     </div>
-  );
-}
+
+    <!-- 遊戲列表網格 -->
+    <div class="max-w-7xl mx-auto">
+      <div id="game-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <!-- 遊戲卡片將透過下方的 JavaScript 動態產生在這裡 -->
+      </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <div class="mt-16 text-center text-gray-400 text-sm font-medium">
+      <p>Have fun & Enjoy gaming! 🐾</p>
+    </div>
+    
+  </div>
+
+  <script>
+    // 遊戲資料設定
+    const games = [
+      {
+        title: "御神籤",
+        url: "https://btosichen.github.io/Omikuji/",
+        icon: "sparkles",
+        color: "bg-pink-100 text-pink-500",
+        shadow: "hover:shadow-pink-200",
+        border: "border-pink-200"
+      },
+      {
+        title: "貓咪炸彈超人3D v1.1",
+        url: "https://btosichen.github.io/Catbomb3D/",
+        icon: "cat",
+        color: "bg-blue-100 text-blue-500",
+        shadow: "hover:shadow-blue-200",
+        border: "border-blue-200"
+      },
+      {
+        title: "炸彈超人",
+        url: "https://btosichen.github.io/Bombermanv1.3/",
+        icon: "bomb",
+        color: "bg-red-100 text-red-500",
+        shadow: "hover:shadow-red-200",
+        border: "border-red-200"
+      },
+      {
+        title: "塔防遊戲",
+        url: "https://btosichen.github.io/Tower-Defense-Games/",
+        icon: "castle",
+        color: "bg-green-100 text-green-500",
+        shadow: "hover:shadow-green-200",
+        border: "border-green-200"
+      },
+      {
+        title: "塔防遊戲 V1.0",
+        url: "https://btosichen.github.io/Tower-Defense-GamesV1.0/",
+        icon: "shield-half",
+        color: "bg-teal-100 text-teal-500",
+        shadow: "hover:shadow-teal-200",
+        border: "border-teal-200"
+      },
+      {
+        title: "三國塔防遊戲",
+        url: "https://btosichen.github.io/2026-Tower-Defense-Games/",
+        icon: "swords",
+        color: "bg-orange-100 text-orange-500",
+        shadow: "hover:shadow-orange-200",
+        border: "border-orange-200"
+      },
+      {
+        title: "英打練習",
+        url: "https://btosichen.github.io/typing/",
+        icon: "keyboard",
+        color: "bg-purple-100 text-purple-500",
+        shadow: "hover:shadow-purple-200",
+        border: "border-purple-200"
+      },
+      {
+        title: "塔羅牌",
+        url: "https://btosichen.github.io/TarotGame/",
+        icon: "moon-star",
+        color: "bg-indigo-100 text-indigo-500",
+        shadow: "hover:shadow-indigo-200",
+        border: "border-indigo-200"
+      },
+      {
+        title: "Running Man",
+        url: "https://btosichen.github.io/Running-Man/",
+        icon: "footprints",
+        color: "bg-yellow-100 text-yellow-600",
+        shadow: "hover:shadow-yellow-200",
+        border: "border-yellow-200"
+      },
+      {
+        title: "Queen-Meow",
+        url: "https://btosichen.github.io/Queen-Meow-V1.0/",
+        icon: "crown",
+        color: "bg-fuchsia-100 text-fuchsia-500",
+        shadow: "hover:shadow-fuchsia-200",
+        border: "border-fuchsia-200"
+      },
+      {
+        title: "Voxel-Cat-Survivor v2.0",
+        url: "https://btosichen.github.io/Voxel-Cat-Survivorv2.0/",
+        icon: "gamepad-2",
+        color: "bg-cyan-100 text-cyan-500",
+        shadow: "hover:shadow-cyan-200",
+        border: "border-cyan-200"
+      }
+    ];
+
+    // 取得要放入卡片的網格容器
+    const grid = document.getElementById('game-grid');
+
+    // 動態產生每一張遊戲卡片
+    games.forEach(game => {
+      const card = document.createElement('a');
+      card.href = game.url;
+      card.target = "_blank"; // 在新分頁開啟
+      card.rel = "noopener noreferrer";
+      // 設定卡片的外觀樣式 (包含懸停動畫)
+      card.className = `group block bg-white rounded-[2rem] p-6 text-center transition-all duration-300 ease-out hover:-translate-y-3 hover:shadow-xl ${game.shadow} border-2 border-transparent hover:${game.border}`;
+
+      // 取得背景顏色的 class (用來給下方小圓點上色)
+      const dotBgClass = game.color.split(' ')[0];
+
+      // 卡片內部 HTML 結構
+      card.innerHTML = `
+        <!-- 可愛圖示容器 -->
+        <div class="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-[1.5rem] flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 ${game.color}">
+          <i data-lucide="${game.icon}" class="w-10 h-10 sm:w-12 sm:h-12" stroke-width="2.5"></i>
+        </div>
+        
+        <!-- 遊戲名稱 -->
+        <h3 class="text-gray-700 font-bold text-sm sm:text-base leading-tight group-hover:text-gray-900 transition-colors">
+          ${game.title}
+        </h3>
+        
+        <!-- 裝飾性小圓點 (滑鼠移過去才會顯示) -->
+        <div class="mt-3 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div class="w-1.5 h-1.5 rounded-full ${dotBgClass}"></div>
+          <div class="w-1.5 h-1.5 rounded-full ${dotBgClass}"></div>
+          <div class="w-1.5 h-1.5 rounded-full ${dotBgClass}"></div>
+        </div>
+      `;
+      
+      grid.appendChild(card);
+    });
+
+    // 渲染 Lucide 圖示
+    lucide.createIcons();
+  </script>
+</body>
+</html>
