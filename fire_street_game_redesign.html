@@ -415,7 +415,6 @@
         </div>
 
         <div class="flex gap-1.5">
-            <button id="btn-gas-config" class="bg-white/60 hover:bg-white/80 border border-rose-300 text-xs font-bold px-2.5 py-1 rounded-full transition">⚙️ Settings</button>
             <button id="btn-highscores-header" class="bg-white/60 hover:bg-white/80 border border-rose-300 text-xs font-bold px-2.5 py-1 rounded-full transition">🏆 High Scores</button>
         </div>
     </header>
@@ -594,49 +593,6 @@
     </div>
 </div>
 
-<!-- Modal 2: GAS 設定 -->
-<div id="modal-gas-config" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border-4 border-cyan-300 max-h-[90vh] overflow-y-auto">
-        <h2 class="text-xl font-bold text-cyan-900 mb-2 flex items-center gap-2">
-            <span>📊</span> Google 試算表 (GAS) 排行榜設定
-        </h2>
-        <p class="text-xs text-slate-600 mb-3">將遊戲分數與生存時間自動記錄到 Google 試算表！</p>
-
-        <div class="mb-4">
-            <label class="block text-xs font-bold text-slate-700 mb-1">GAS Web App URL:</label>
-            <input type="url" id="input-gas-url" class="w-full text-xs px-3 py-2 rounded-xl border-2 border-slate-200 focus:border-cyan-500 focus:outline-none font-mono" placeholder="https://script.google.com/macros/s/.../exec">
-        </div>
-
-        <div class="bg-slate-900 text-slate-100 p-3 rounded-xl text-[11px] font-mono overflow-x-auto mb-4 border border-slate-700">
-            <div class="text-amber-400 font-bold mb-1">// Google Apps Script 程式碼範例：</div>
-<pre>function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var data = sheet.getDataRange().getValues();
-  var list = [];
-  for (var i = 1; i &lt; data.length; i++) {
-    list.push({ name: data[i][0], score: data[i][1], time: data[i][2], date: data[i][3] });
-  }
-  list.sort(function(a, b) { return b.score - a.score; });
-  return ContentService.createTextOutput(JSON.stringify(list.slice(0, 10)))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var p = JSON.parse(e.postData.contents);
-  sheet.appendRow([p.name, p.score, p.time, new Date().toLocaleString()]);
-  return ContentService.createTextOutput(JSON.stringify({status: "ok"}))
-    .setMimeType(ContentService.MimeType.JSON);
-}</pre>
-        </div>
-
-        <div class="flex gap-2">
-            <button id="btn-save-gas" class="flex-1 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl text-sm transition">儲存 URL 設定</button>
-            <button id="btn-close-gas" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm transition">關閉</button>
-        </div>
-    </div>
-</div>
-
 <!-- Modal 3: 遊戲結束與排行榜 -->
 <div id="modal-gameover" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full text-center shadow-2xl border-4 border-rose-300">
@@ -744,10 +700,13 @@ const FIRE_TYPES = {
     D: { name: "D類 (金屬火災)", icon: "⚙️🔥", hp: 180, speed: 0.20, reward: 60 }
 };
 
+// 老師專用：將 GAS 部署後的 /exec 網址貼在引號內。學生畫面不會出現設定入口。
+const GAS_WEB_APP_URL = '';
+
 // --- 遊戲狀態 ---
 let state = {
     playerName: "小英雄",
-    gasUrl: localStorage.getItem("FIRE_TD_GAS_URL") || "",
+    gasUrl: GAS_WEB_APP_URL.trim(),
     baseHp: 100,
     water: 150,
     score: 0,
@@ -776,10 +735,8 @@ const floatTextLayer    = document.getElementById('float-text-layer');
 const levelBadge        = document.getElementById('level-badge');
 
 const modalStart    = document.getElementById('modal-start');
-const modalGasConfig= document.getElementById('modal-gas-config');
 const modalGameover = document.getElementById('modal-gameover');
 const inputPlayerName = document.getElementById('input-player-name');
-const inputGasUrl     = document.getElementById('input-gas-url');
 
 // ---- 單一街道防禦格初始化 (5格直式隊形) ----
 function initGridSlots() {
@@ -1160,7 +1117,6 @@ function handleLeaderboardSubmit(name, score, time) {
         fetch(state.gasUrl, {
             method: 'POST',
             mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, score, time })
         })
         .then(() => {
@@ -1172,7 +1128,7 @@ function handleLeaderboardSubmit(name, score, time) {
             renderLeaderboardList(localScores);
         });
     } else {
-        syncStatus.innerText = "使用本地儲存 (可點 Settings 設定 GAS)";
+        syncStatus.innerText = "使用本機排行榜";
         tag.innerText = "本地榜";
         renderLeaderboardList(localScores);
     }
@@ -1182,9 +1138,15 @@ function fetchGasLeaderboard() {
     if (!state.gasUrl) return;
     fetch(state.gasUrl)
         .then(res => res.json())
-        .then(data => renderLeaderboardList(data))
+        .then(data => {
+            if (!Array.isArray(data)) throw new Error('排行榜回應格式不正確');
+            document.getElementById('gas-sync-status').innerText = '✅ 雲端排行榜已更新';
+            renderLeaderboardList(data);
+        })
         .catch(() => {
             const local = JSON.parse(localStorage.getItem('FIRE_TD_SCORES') || '[]');
+            document.getElementById('gas-sync-status').innerText = '⚠️ 雲端連線失敗，顯示本機紀錄';
+            document.getElementById('leaderboard-type-tag').innerText = '本地榜';
             renderLeaderboardList(local);
         });
 }
@@ -1203,24 +1165,33 @@ function renderLeaderboardList(list) {
         if (idx === 0) badge = `<span class="text-base">🥇</span>`;
         if (idx === 1) badge = `<span class="text-base">🥈</span>`;
         if (idx === 2) badge = `<span class="text-base">🥉</span>`;
+        const safeName = escapeHtml(String(item.name || '未命名'));
+        const safeTime = /^\d{1,3}:\d{2}$/.test(String(item.time || '')) ? String(item.time) : '--:--';
+        const safeScore = Number.isFinite(Number(item.score)) ? Math.max(0, Math.floor(Number(item.score))) : 0;
         el.innerHTML = `
             <div class="flex items-center gap-2">
                 ${badge}
-                <span class="font-bold text-slate-800">${item.name}</span>
+                <span class="font-bold text-slate-800">${safeName}</span>
             </div>
             <div class="flex gap-3 text-slate-600 font-mono">
-                <span>⏱️ ${item.time}</span>
-                <span class="font-bold text-amber-500">🏆 ${item.score}分</span>
+                <span>⏱️ ${safeTime}</span>
+                <span class="font-bold text-amber-500">🏆 ${safeScore}分</span>
             </div>
         `;
         container.appendChild(el);
     });
 }
 
+function escapeHtml(value) {
+    return value.replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    })[char]);
+}
+
 // 顯示高分榜 (從遊戲中也可查看)
 function showHighScores() {
     const localScores = JSON.parse(localStorage.getItem('FIRE_TD_SCORES') || '[]');
-    if (localScores.length === 0) {
+    if (!state.gasUrl && localScores.length === 0) {
         showAlert("📋 尚無高分紀錄，快來創造第一筆！");
         return;
     }
@@ -1229,8 +1200,13 @@ function showHighScores() {
     document.getElementById('final-time').innerText = '-';
     document.getElementById('final-score').innerText = '-';
     document.getElementById('gas-sync-status').innerText = '';
-    document.getElementById('leaderboard-type-tag').innerText = '本地榜';
-    renderLeaderboardList(localScores);
+    document.getElementById('leaderboard-type-tag').innerText = state.gasUrl ? '雲端榜' : '本地榜';
+    if (state.gasUrl) {
+        document.getElementById('gas-sync-status').innerText = '正在讀取排行榜...';
+        fetchGasLeaderboard();
+    } else {
+        renderLeaderboardList(localScores);
+    }
     modalGameover.classList.remove('hidden');
 }
 
@@ -1239,19 +1215,6 @@ document.getElementById('btn-start-game').addEventListener('click', startGame);
 document.getElementById('btn-restart-game').addEventListener('click', () => {
     modalGameover.classList.add('hidden');
     startGame();
-});
-document.getElementById('btn-gas-config').addEventListener('click', () => {
-    inputGasUrl.value = state.gasUrl;
-    modalGasConfig.classList.remove('hidden');
-});
-document.getElementById('btn-close-gas').addEventListener('click', () => {
-    modalGasConfig.classList.add('hidden');
-});
-document.getElementById('btn-save-gas').addEventListener('click', () => {
-    state.gasUrl = inputGasUrl.value.trim();
-    localStorage.setItem("FIRE_TD_GAS_URL", state.gasUrl);
-    modalGasConfig.classList.add('hidden');
-    showAlert("✅ Google Apps Script URL 設定已更新！");
 });
 document.getElementById('btn-highscores-header').addEventListener('click', showHighScores);
 
