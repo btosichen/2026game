@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>我的可愛遊戲大廳</title>
+  <link rel="icon" type="image/png" href="./firefighter-mascot-logo.png">
   
   <!-- 載入 Tailwind CSS 來處理樣式 -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -55,6 +56,15 @@
   <script>
     // 遊戲資料設定
     const games = [
+      {
+        title: "萌系消防小英雄",
+        url: "./fire_street_game_redesign.html",
+        image: "./firefighter-mascot-logo.png",
+        icon: "flame-kindling",
+        color: "bg-orange-100 text-red-500",
+        shadow: "hover:shadow-orange-200",
+        border: "border-orange-300"
+      },
       {
         title: "御神籤",
         url: "https://btosichen.github.io/Omikuji/",
@@ -220,7 +230,9 @@
       card.innerHTML = `
         <!-- 可愛圖示容器 -->
         <div class="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-[1.5rem] flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 ${game.color}">
-          <i data-lucide="${game.icon}" class="w-10 h-10 sm:w-12 sm:h-12" stroke-width="2.5"></i>
+          ${game.image
+            ? `<img src="${game.image}" alt="" class="w-[92%] h-[92%] object-contain drop-shadow-md" loading="eager">`
+            : `<i data-lucide="${game.icon}" class="w-10 h-10 sm:w-12 sm:h-12" stroke-width="2.5"></i>`}
         </div>
         
         <!-- 遊戲名稱 -->
