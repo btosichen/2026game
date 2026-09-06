@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>萌系消防小英雄：淡水街頭守衛戰！</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+            background-color: #fce7d8;
+            background-image: radial-gradient(#fdd5c5 15%, transparent 16%), radial-gradient(#fce7d8 15%, transparent 16%);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            user-select: none;
+        }
+        .game-card-shadow {
+            box-shadow: 0 15px 35px rgba(50,50,93,0.12), 0 5px 15px rgba(0,0,0,0.08), 0 0 0 5px #fff;
+        }
+        /* 左側英雄面板 */
+        #hero-panel {
+            background: linear-gradient(180deg, #fce8e8 0%, #fdf0e0 100%);
+            border-right: 2px solid #f5c0b0;
+            min-width: 168px;
+            max-width: 168px;
+        }
+        .hero-card {
+            transition: all 0.2s cubic-bezier(0.175,0.885,0.32,1.275);
+            border-width: 2px;
+        }
+        .hero-card:hover { transform: translateX(4px); }
+        .hero-card.selected {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239,68,68,0.3);
+            transform: scale(1.04);
+        }
+        /* 街道樣式 */
+        .street-road {
+            background: linear-gradient(180deg, #8d9db0 0%, #a4b4c4 30%, #b8c8d8 50%, #a4b4c4 70%, #8d9db0 100%);
+            position: relative;
+        }
+        .street-road::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            right: 8%;
+            height: 2px;
+            background: repeating-linear-gradient(90deg, rgba(255,255,255,0.5) 0px, rgba(255,255,255,0.5) 20px, transparent 20px, transparent 36px);
+            transform: translateY(-50%);
+        }
+        /* 橫紋斑馬線 */
+        .crosswalk {
+            position: absolute;
+            left: 44px;
+            top: 0; bottom: 0;
+            width: 18px;
+            background: repeating-linear-gradient(180deg, rgba(255,255,255,0.7) 0px, rgba(255,255,255,0.7) 6px, transparent 6px, transparent 12px);
+        }
+        /* 防禦格 */
+        .defense-slot {
+            transition: all 0.2s ease;
+            border: 2px dashed #a0b4c8;
+            cursor: pointer;
+        }
+        .defense-slot:hover {
+            border-color: #3b82f6;
+            background-color: rgba(219,234,254,0.6);
+        }
+        /* 建築區域 */
+        .buildings-top {
+            background: linear-gradient(180deg, #c8eaff 0%, #d4f0c0 60%, #c0d8a0 100%);
+        }
+        .buildings-bottom {
+            background: linear-gradient(0deg, #c8eaff 0%, #d4f0c0 60%, #c0d8a0 100%);
+        }
+        /* 動畫 */
+        @keyframes fireWiggle {
+            0%   { transform: scale(1) rotate(-3deg) translateX(-50%); }
+            50%  { transform: scale(1.12) rotate(3deg) translateX(-50%); }
+            100% { transform: scale(1) rotate(-3deg) translateX(-50%); }
+        }
+        .fire-anim { animation: fireWiggle 0.55s infinite ease-in-out; }
+
+        @keyframes projectileShoot {
+            0%   { opacity:1; transform: scale(0.8) translateX(-50%); }
+            100% { opacity:0.9; transform: scale(1.1) translateX(-50%); }
+        }
+        .bullet-anim { animation: projectileShoot 0.3s infinite alternate; }
+
+        @keyframes floatUp {
+            0%   { opacity:1; transform: translateY(0) scale(1); }
+            100% { opacity:0; transform: translateY(-44px) scale(1.2); }
+        }
+        .floating-text {
+            position: absolute;
+            animation: floatUp 0.85s forwards ease-out;
+            pointer-events: none;
+            font-weight: 900;
+            z-index: 50;
+            white-space: nowrap;
+        }
+        /* 建築裝飾排列 */
+        .bldg-row {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            padding: 6px 12px 0;
+            height: 100%;
+        }
+        .bldg-row.bottom { align-items: flex-start; padding: 0 12px 6px; }
+        .bldg-item { text-align: center; font-size: 2.2rem; line-height: 1; }
+        .bldg-item small { display: block; font-size: 0.55rem; color: #555; font-weight: 700; margin-top: 2px; }
+        /* 消防站 */
+        .fire-station {
+            position: absolute;
+            right: 0; top: 0; bottom: 0;
+            width: 56px;
+            background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 2px;
+            border-left: 2px solid #991b1b;
+        }
+        .fire-station span { font-size: 1.5rem; }
+        .fire-station small { font-size: 0.5rem; color: #fff; font-weight: 700; text-align: center; line-height: 1.2; }
+        /* 社區防線 */
+        .community-side {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 44px;
+            background: linear-gradient(90deg, rgba(220,50,50,0.25) 0%, transparent 100%);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: space-evenly;
+            border-right: 2px dashed rgba(220,50,50,0.4);
+            z-index: 5;
+        }
+        /* 消火栓 */
+        .hydrant { font-size: 1.4rem; }
+        /* HP 條顏色 */
+        #hp-bar.danger { background-color: #ef4444; }
+        #hp-bar.warning { background-color: #f59e0b; }
+        /* Level badge */
+        .level-badge {
+            background: rgba(255,255,255,0.85);
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 2px 10px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #334155;
+        }
+
+        /* ===== 2026 粉彩手繪街區改版 ===== */
+        :root {
+            --ink: #432b2b;
+            --paper: #fff1e8;
+            --peach: #f7c4b8;
+            --line: #573b3b;
+            --slot: #f3da68;
+        }
+        html, body { min-width: 980px; }
+        body {
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 12% 18%, rgba(255,255,255,.82) 0 2px, transparent 3px),
+                linear-gradient(135deg, #f8d4cc 0%, #fde9de 48%, #f3c1bb 100%);
+            background-size: 28px 28px, auto;
+            padding: 10px !important;
+        }
+        #app-container {
+            max-width: 1480px !important;
+            min-height: min(780px, 96vh);
+            max-height: 96vh !important;
+            border: 3px solid var(--line) !important;
+            border-radius: 18px !important;
+            background: var(--paper) !important;
+            box-shadow: 0 18px 0 rgba(91,54,54,.12), 0 24px 55px rgba(74,38,38,.24) !important;
+        }
+        #app-container > header {
+            min-height: 62px;
+            padding: 9px 18px !important;
+            gap: 18px !important;
+            background: linear-gradient(90deg, #f8beb9 0%, #ffd9ce 50%, #f7c2bd 100%) !important;
+            border-bottom: 3px solid var(--line) !important;
+            box-shadow: inset 0 -5px rgba(255,255,255,.22);
+        }
+        #app-container > header > span:first-child {
+            color: #452929 !important;
+            font-size: clamp(17px, 1.55vw, 25px) !important;
+            letter-spacing: .02em;
+            text-shadow: 0 2px rgba(255,255,255,.55);
+        }
+        #app-container > header > div:not(:last-child) {
+            min-height: 38px;
+            padding: 5px 12px !important;
+            border: 2px solid rgba(87,59,59,.35);
+            border-radius: 11px !important;
+            background: rgba(255,244,237,.76) !important;
+            font-size: 15px !important;
+        }
+        #app-container > header button {
+            min-height: 42px;
+            padding: 6px 14px !important;
+            border: 2px solid var(--line) !important;
+            border-radius: 10px !important;
+            background: #fff0e9 !important;
+            color: var(--ink) !important;
+            font-size: 15px !important;
+            box-shadow: 0 3px 0 rgba(87,59,59,.26);
+        }
+        #app-container > header button:hover { transform: translateY(-2px); box-shadow: 0 5px 0 rgba(87,59,59,.22); }
+        #alert-banner {
+            border-bottom: 2px solid var(--line) !important;
+            background: #fff0cf !important;
+            color: #6f3c25 !important;
+            font-size: 15px !important;
+            padding: 8px 18px !important;
+        }
+        #app-container > .flex.flex-1 { min-height: 610px !important; }
+        #hero-panel {
+            min-width: 194px !important;
+            max-width: 194px !important;
+            padding: 10px !important;
+            gap: 10px !important;
+            background: linear-gradient(180deg, #ffe9e1 0%, #fff4eb 56%, #ffe5dc 100%) !important;
+            border-right: 3px solid var(--line) !important;
+            box-shadow: inset -8px 0 rgba(114,70,61,.07);
+        }
+        #hero-panel > div:first-child {
+            margin: 0 !important;
+            color: var(--ink) !important;
+            font-size: 18px !important;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
+        }
+        .level-badge {
+            position: absolute;
+            left: 204px;
+            top: 72px;
+            z-index: 35;
+            min-width: 106px;
+            padding: 6px 12px;
+            border: 2px solid var(--line);
+            background: rgba(255,239,231,.94);
+            color: var(--ink);
+            font-size: 17px;
+            box-shadow: 0 3px 0 rgba(73,45,45,.2);
+        }
+        .hero-card {
+            min-height: 82px;
+            padding: 10px 11px !important;
+            gap: 12px !important;
+            border: 2px solid var(--line) !important;
+            border-radius: 12px !important;
+            background: rgba(243,251,248,.92) !important;
+            color: var(--ink) !important;
+            box-shadow: 0 4px 0 rgba(87,59,59,.17), inset 0 0 0 2px rgba(255,255,255,.6);
+        }
+        .hero-card:nth-of-type(2) { background: rgba(218,246,250,.94) !important; }
+        .hero-card:nth-of-type(3) { background: rgba(234,247,255,.94) !important; }
+        .hero-card:nth-of-type(4) { background: rgba(247,249,239,.94) !important; }
+        .hero-card:nth-of-type(5) { background: rgba(255,238,226,.94) !important; }
+        .hero-card > span { font-size: 39px !important; filter: drop-shadow(0 2px 0 white); }
+        .hero-card .font-bold { color: var(--ink) !important; font-size: 15px !important; line-height: 1.14; }
+        .hero-card .text-\[10px\] { color: #633b2f !important; background: #f8d680 !important; font-size: 11px !important; }
+        .hero-card:hover { transform: translateX(5px) rotate(-.5deg); }
+        .hero-card.selected {
+            border-color: #cf4b38 !important;
+            background: #fff7d6 !important;
+            box-shadow: 0 0 0 4px #f5cf5d, 0 6px 0 rgba(87,59,59,.22) !important;
+        }
+        #game-main {
+            isolation: isolate;
+            background-color: #dfc9be;
+            background-image: linear-gradient(rgba(255,244,235,.30), rgba(255,244,235,.30)), url('assets/tamsui-fire-street-reference.png');
+            background-size: 116% auto;
+            background-position: right bottom;
+            background-repeat: no-repeat;
+        }
+        #game-main::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: linear-gradient(180deg, rgba(255,240,230,.12), transparent 22% 76%, rgba(255,235,219,.18));
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,.35);
+        }
+        #game-main::before {
+            content: '警告：⚠️ 派錯隊員，火勢會暴走！請依火災類型正確滅火';
+            position: absolute;
+            top: 10px;
+            left: 22%;
+            right: 21%;
+            z-index: 34;
+            padding: 7px 14px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 900;
+            color: #59352e;
+            background: rgba(255,239,225,.94);
+            border: 2px solid var(--line);
+            border-radius: 10px;
+            box-shadow: 0 4px 0 rgba(87,59,59,.2);
+        }
+        .buildings-top, .buildings-bottom {
+            flex-basis: 25% !important;
+            background: transparent !important;
+            z-index: 1;
+        }
+        .buildings-top .bldg-row, .buildings-bottom .bldg-row,
+        .buildings-top .absolute:not(.fire-station), .buildings-bottom .absolute { opacity: .12; }
+        .street-road {
+            flex-basis: 50% !important;
+            z-index: 10 !important;
+            background: rgba(93,82,86,.18) !important;
+            border-top: 3px solid rgba(87,59,59,.72);
+            border-bottom: 3px solid rgba(87,59,59,.72);
+            box-shadow: inset 0 3px rgba(255,255,255,.25), inset 0 -3px rgba(255,255,255,.2);
+        }
+        .street-road::before { height: 4px; opacity: .75; }
+        .crosswalk { width: 54px; left: 7px; opacity: .7; }
+        .community-side { width: 64px; background: rgba(255,213,195,.62); border-right: 2px dashed #c95e4d; }
+        .fire-station { width: 76px; border-left: 3px solid var(--line); background: rgba(193,55,45,.9); }
+        .fire-station span { font-size: 34px; }
+        .fire-station small { font-size: 10px; }
+        #slots-lane-0 { display: contents; }
+        .defense-slot {
+            height: auto !important;
+            min-height: 45px;
+            border: 3px solid var(--slot) !important;
+            border-radius: 5px !important;
+            background: rgba(255,246,161,.16) !important;
+            box-shadow: inset 0 0 0 2px rgba(115,78,43,.32);
+        }
+        .defense-slot:hover { background: rgba(255,239,116,.48) !important; transform: translateY(-3px); }
+        .street-road .grid {
+            position: absolute;
+            left: 76px;
+            top: 10px;
+            bottom: 10px;
+            width: 76px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            grid-template-rows: repeat(5, minmax(0, 1fr));
+            gap: 6px !important;
+        }
+        .street-road .grid > div:not(.contents) { min-width: 0; }
+        .street-road .defense-slot span.text-2xl { font-size: 22px !important; }
+        .street-road .defense-slot span.text-\[8px\] { font-size: 7px !important; }
+        #game-main > .absolute.top-2.right-2 {
+            top: 9px !important;
+            right: 12px !important;
+            padding: 8px 13px !important;
+            color: var(--ink) !important;
+            background: rgba(255,239,230,.94) !important;
+            border: 2px solid var(--line) !important;
+            border-radius: 9px !important;
+            font-size: 14px !important;
+            box-shadow: 0 4px 0 rgba(87,59,59,.18);
+        }
+        #fire-entities-layer, #bullet-layer, #float-text-layer { z-index: 24 !important; }
+        #fire-entities-layer .text-3xl { font-size: 43px !important; }
+        #bullet-layer .text-xl { font-size: 30px !important; filter: drop-shadow(0 2px 0 white); }
+        .floating-text {
+            padding: 4px 8px;
+            border: 2px solid var(--line);
+            border-radius: 8px;
+            background: #fff2e7;
+            text-shadow: 0 1px white;
+        }
+        .fixed > div { border-color: #71483e !important; background: #fff5ec !important; }
+        @media (max-height: 760px) {
+            #app-container { min-height: 690px; }
+            #app-container > .flex.flex-1 { min-height: 530px !important; }
+            .hero-card { min-height: 67px; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-2 md:p-3">
+
+<!-- 遊戲主視窗 -->
+<div id="app-container" class="w-full max-w-5xl bg-white/95 rounded-3xl game-card-shadow border-4 border-rose-200 overflow-hidden flex flex-col relative" style="max-height:98vh;">
+
+    <!-- ===== 頂部 HUD ===== -->
+    <header class="bg-gradient-to-r from-rose-300 via-orange-200 to-amber-200 text-slate-800 px-3 py-2 flex flex-wrap justify-between items-center gap-2 border-b-2 border-rose-300">
+        <span class="font-black text-sm md:text-base text-rose-900">🚒 萌系消防小英雄：淡水街頭守衛戰！</span>
+
+        <div class="flex items-center gap-1.5 bg-white/50 px-2.5 py-1 rounded-full text-xs font-bold">
+            <span>💰</span>
+            <span id="hud-water" class="text-amber-700 font-black text-base">150</span>
+            <span class="text-amber-600">g</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-white/50 px-2.5 py-1 rounded-full">
+            <span class="text-xs font-bold text-slate-600">🏰 防線</span>
+            <div class="w-20 bg-gray-200 rounded-full h-2.5 overflow-hidden border border-white/60">
+                <div id="hp-bar" class="bg-emerald-400 h-full transition-all duration-300" style="width:100%"></div>
+            </div>
+            <span id="hp-text" class="text-xs font-bold text-slate-700">100%</span>
+        </div>
+
+        <div class="flex items-center gap-1 bg-black/20 px-2.5 py-1 rounded-xl text-xs text-slate-700 font-bold">
+            <span>⏱️</span>
+            <span id="hud-timer" class="font-mono text-sm font-black text-indigo-800">00:00</span>
+        </div>
+
+        <div class="flex items-center gap-1 bg-black/20 px-2.5 py-1 rounded-xl text-xs text-slate-700 font-bold">
+            <span>🏆</span>
+            <span id="hud-score" class="font-mono text-sm font-black text-amber-700">0</span>
+        </div>
+
+        <div class="flex gap-1.5">
+            <button id="btn-gas-config" class="bg-white/60 hover:bg-white/80 border border-rose-300 text-xs font-bold px-2.5 py-1 rounded-full transition">⚙️ Settings</button>
+            <button id="btn-highscores-header" class="bg-white/60 hover:bg-white/80 border border-rose-300 text-xs font-bold px-2.5 py-1 rounded-full transition">🏆 High Scores</button>
+        </div>
+    </header>
+
+    <!-- 警告廣播 Banner -->
+    <div id="alert-banner" class="bg-amber-100 border-b-2 border-amber-300 text-amber-800 text-xs px-4 py-1.5 text-center font-bold hidden">
+        ⚠️ 警告
+    </div>
+
+    <!-- ===== 主體橫向排列 ===== -->
+    <div class="flex flex-1 overflow-hidden" style="min-height:460px;">
+
+        <!-- 左側英雄面板 -->
+        <aside id="hero-panel" class="flex flex-col p-2 gap-1.5 overflow-y-auto">
+            <div class="text-center text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">hero-panel</div>
+
+            <!-- 關卡指示 -->
+            <div class="level-badge text-center" id="level-badge">Level: A</div>
+
+            <!-- 英雄卡：水槍 A -->
+            <button class="hero-card border-sky-300 bg-sky-50 rounded-2xl p-2 text-left cursor-pointer flex items-center gap-2" data-unit="A">
+                <span class="text-2xl">💧</span>
+                <div>
+                    <div class="font-bold text-xs text-sky-800">Water<br>Type A</div>
+                    <div class="bg-sky-200 text-sky-900 font-extrabold text-[10px] rounded-full px-1.5 py-0.5 text-center mt-0.5">💰 50g</div>
+                </div>
+            </button>
+
+            <!-- 英雄卡：泡沫 B -->
+            <button class="hero-card border-amber-300 bg-amber-50 rounded-2xl p-2 text-left cursor-pointer flex items-center gap-2" data-unit="B">
+                <span class="text-2xl">🫧</span>
+                <div>
+                    <div class="font-bold text-xs text-amber-800">Foam<br>Type B</div>
+                    <div class="bg-amber-200 text-amber-900 font-extrabold text-[10px] rounded-full px-1.5 py-0.5 text-center mt-0.5">💰 60g</div>
+                </div>
+            </button>
+
+            <!-- 英雄卡：CO2 C -->
+            <button class="hero-card border-indigo-300 bg-indigo-50 rounded-2xl p-2 text-left cursor-pointer flex items-center gap-2" data-unit="C">
+                <span class="text-2xl">💨</span>
+                <div>
+                    <div class="font-bold text-xs text-indigo-800">CO2<br>Type C</div>
+                    <div class="bg-indigo-200 text-indigo-900 font-extrabold text-[10px] rounded-full px-1.5 py-0.5 text-center mt-0.5">💰 70g</div>
+                </div>
+            </button>
+
+            <!-- 英雄卡：乾粉 D -->
+            <button class="hero-card border-purple-300 bg-purple-50 rounded-2xl p-2 text-left cursor-pointer flex items-center gap-2" data-unit="D">
+                <span class="text-2xl">🧪</span>
+                <div>
+                    <div class="font-bold text-xs text-purple-800">Dry Powder<br>Type D</div>
+                    <div class="bg-purple-200 text-purple-900 font-extrabold text-[10px] rounded-full px-1.5 py-0.5 text-center mt-0.5">💰 80g</div>
+                </div>
+            </button>
+
+            <!-- 英雄卡：ABC 萬能 -->
+            <button class="hero-card border-rose-300 bg-rose-50 rounded-2xl p-2 text-left cursor-pointer flex items-center gap-2" data-unit="ABC">
+                <span class="text-2xl">🧯</span>
+                <div>
+                    <div class="font-bold text-xs text-rose-800">Multipurpose<br>Dry Powder ABC</div>
+                    <div class="bg-rose-200 text-rose-900 font-extrabold text-[10px] rounded-full px-1.5 py-0.5 text-center mt-0.5">💰 110g</div>
+                </div>
+            </button>
+
+            <div class="text-[9px] text-slate-400 text-center mt-auto pb-1">點選隊員再<br>點街道部署</div>
+        </aside>
+
+        <!-- 主遊戲區域 -->
+        <main id="game-main" class="flex-1 relative flex flex-col overflow-hidden">
+
+            <!-- 玩家資訊 (右上角) -->
+            <div class="absolute top-2 right-2 z-20 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 leading-tight">
+                Player: <span id="hud-player-name">小英雄</span><br>
+                <span class="text-[10px] text-slate-500">(Score: <span id="score-display2">0</span>, <span id="timer-display2">00:00</span>)</span>
+            </div>
+
+            <!-- ===== 上方建築區 ===== -->
+            <div class="buildings-top relative overflow-hidden" style="flex: 0 0 36%;">
+                <div class="bldg-row">
+                    <div class="bldg-item">🏪<small>雜貨店</small></div>
+                    <div class="bldg-item">🌳</div>
+                    <div class="bldg-item" style="font-size:2.8rem">🏬<small>カーナ店</small></div>
+                    <div class="bldg-item">🌲</div>
+                    <div class="bldg-item">🏪<small>便利店</small></div>
+                    <div class="bldg-item">🌳</div>
+                    <div class="bldg-item" style="font-size:2.6rem">🏢<small>大樓</small></div>
+                </div>
+                <!-- 人行道 -->
+                <div class="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-r from-stone-200 via-stone-300 to-stone-200 border-t border-stone-400"></div>
+                <!-- 路燈 -->
+                <div class="absolute bottom-4 left-1/4 text-xl">🚦</div>
+                <div class="absolute bottom-4 left-3/4 text-xl">🚦</div>
+                <!-- 消火栓 -->
+                <div class="absolute bottom-4 left-[55%] text-lg">🚒</div>
+            </div>
+
+            <!-- ===== 單一滅火街道 ===== -->
+            <div class="street-road relative flex items-center" style="flex: 0 0 28%; z-index: 10;">
+                <!-- 斑馬線 -->
+                <div class="crosswalk"></div>
+
+                <!-- 社區防線 (左側) -->
+                <div class="community-side">
+                    <span class="text-base">🏡</span>
+                    <span class="text-base">🏫</span>
+                    <span class="text-base">🏥</span>
+                </div>
+
+                <!-- 5個直式防禦格 -->
+                <div class="grid grid-cols-1 gap-1.5 z-10 px-2">
+                    <div id="slots-lane-0" class="contents"></div>
+                </div>
+
+                <!-- 消防站 (右側) -->
+                <div class="fire-station">
+                    <span>🚒</span>
+                    <small>FIRE<br>STATION</small>
+                </div>
+            </div>
+
+            <!-- ===== 下方建築區 ===== -->
+            <div class="buildings-bottom relative overflow-hidden" style="flex: 0 0 36%;">
+                <!-- 人行道 -->
+                <div class="absolute top-0 left-0 right-0 h-4 bg-gradient-to-r from-stone-200 via-stone-300 to-stone-200 border-b border-stone-400"></div>
+                <div class="bldg-row bottom" style="padding-top: 16px;">
+                    <div class="bldg-item">🏠<small>住宅</small></div>
+                    <div class="bldg-item">🌿</div>
+                    <div class="bldg-item">🏠<small>住宅</small></div>
+                    <div class="bldg-item">🌲</div>
+                    <div class="bldg-item" style="font-size:2.8rem">🏚️<small>舊宅</small></div>
+                    <div class="bldg-item">🌳</div>
+                    <div class="bldg-item">🏠<small>住宅</small></div>
+                </div>
+            </div>
+
+            <!-- 動態火苗覆蓋層 -->
+            <div id="fire-entities-layer" class="absolute inset-0 pointer-events-none" style="overflow:visible; z-index:15;"></div>
+            <!-- 動態投射物覆蓋層 -->
+            <div id="bullet-layer" class="absolute inset-0 pointer-events-none" style="overflow:visible; z-index:16;"></div>
+            <!-- 浮動提示文字層 -->
+            <div id="float-text-layer" class="absolute inset-0 pointer-events-none" style="overflow:visible; z-index:20;"></div>
+
+        </main>
+    </div>
+</div><!-- /app-container -->
+
+
+<!-- =====================================================
+     MODALS
+===================================================== -->
+
+<!-- Modal 1: 遊戲開始 -->
+<div id="modal-start" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl border-4 border-rose-300">
+        <div class="text-5xl mb-2">🚒🔥🛡️</div>
+        <h1 class="text-2xl font-black text-rose-900 mb-1">萌系消防小英雄</h1>
+        <p class="text-sm font-bold text-rose-600 mb-3">淡水街頭守衛戰！</p>
+        <p class="text-xs text-slate-500 mb-4">掌握相剋原則，守護社區安全！</p>
+
+        <div class="text-left bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs space-y-1.5 mb-4 text-slate-700">
+            <div class="font-bold text-rose-700">💡 消防知識提示：</div>
+            <div>🪵 <strong class="text-emerald-600">A類 (紙木)</strong>：用水槍 / ABC 滅火。</div>
+            <div>🛢️ <strong class="text-amber-600">B類 (油類)</strong>：用泡沫 / ABC 滅火。<span class="text-red-500 font-bold">(用水濺射!)</span></div>
+            <div>⚡ <strong class="text-indigo-600">C類 (電氣)</strong>：用 CO2 / ABC 滅火。<span class="text-red-500 font-bold">(用水觸電!)</span></div>
+            <div>⚙️ <strong class="text-purple-600">D類 (金屬)</strong>：只能特種乾粉！<span class="text-red-500 font-bold">(水/CO2爆燃!)</span></div>
+        </div>
+
+        <div class="mb-5 text-left">
+            <label class="block text-xs font-bold text-slate-700 mb-1">消防隊長姓名：</label>
+            <input type="text" id="input-player-name" value="小英雄" class="w-full px-4 py-2.5 rounded-xl border-2 border-rose-200 focus:border-rose-500 focus:outline-none font-bold text-slate-800 text-center" placeholder="請輸入姓名...">
+        </div>
+
+        <button id="btn-start-game" class="w-full py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-black text-lg rounded-2xl shadow-lg transform transition active:scale-95">
+            開始出勤任務 🚀
+        </button>
+    </div>
+</div>
+
+<!-- Modal 2: GAS 設定 -->
+<div id="modal-gas-config" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border-4 border-cyan-300 max-h-[90vh] overflow-y-auto">
+        <h2 class="text-xl font-bold text-cyan-900 mb-2 flex items-center gap-2">
+            <span>📊</span> Google 試算表 (GAS) 排行榜設定
+        </h2>
+        <p class="text-xs text-slate-600 mb-3">將遊戲分數與生存時間自動記錄到 Google 試算表！</p>
+
+        <div class="mb-4">
+            <label class="block text-xs font-bold text-slate-700 mb-1">GAS Web App URL:</label>
+            <input type="url" id="input-gas-url" class="w-full text-xs px-3 py-2 rounded-xl border-2 border-slate-200 focus:border-cyan-500 focus:outline-none font-mono" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+
+        <div class="bg-slate-900 text-slate-100 p-3 rounded-xl text-[11px] font-mono overflow-x-auto mb-4 border border-slate-700">
+            <div class="text-amber-400 font-bold mb-1">// Google Apps Script 程式碼範例：</div>
+<pre>function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  var list = [];
+  for (var i = 1; i &lt; data.length; i++) {
+    list.push({ name: data[i][0], score: data[i][1], time: data[i][2], date: data[i][3] });
+  }
+  list.sort(function(a, b) { return b.score - a.score; });
+  return ContentService.createTextOutput(JSON.stringify(list.slice(0, 10)))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var p = JSON.parse(e.postData.contents);
+  sheet.appendRow([p.name, p.score, p.time, new Date().toLocaleString()]);
+  return ContentService.createTextOutput(JSON.stringify({status: "ok"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+        </div>
+
+        <div class="flex gap-2">
+            <button id="btn-save-gas" class="flex-1 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl text-sm transition">儲存 URL 設定</button>
+            <button id="btn-close-gas" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm transition">關閉</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 3: 遊戲結束與排行榜 -->
+<div id="modal-gameover" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full text-center shadow-2xl border-4 border-rose-300">
+        <div class="text-5xl mb-2">🚨💥🚒</div>
+        <h2 class="text-2xl font-black text-rose-600 mb-1">任務結束！防線已被突破</h2>
+        <p id="gameover-reason" class="text-xs text-slate-500 mb-4">火勢太猛烈，社區防線受損！</p>
+
+        <div class="grid grid-cols-2 gap-3 mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+            <div class="bg-white p-2 rounded-xl shadow-sm">
+                <div class="text-[10px] text-slate-400 font-bold">生存時間</div>
+                <div id="final-time" class="text-lg font-black text-indigo-600">00:00</div>
+            </div>
+            <div class="bg-white p-2 rounded-xl shadow-sm">
+                <div class="text-[10px] text-slate-400 font-bold">總滅火積分</div>
+                <div id="final-score" class="text-lg font-black text-amber-500">0</div>
+            </div>
+        </div>
+
+        <div class="mb-5 text-left">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="font-bold text-xs text-slate-700 flex items-center gap-1">
+                    🏆 英雄榮譽榜 <span id="leaderboard-type-tag" class="text-[10px] px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">本地儲存</span>
+                </h3>
+                <span id="gas-sync-status" class="text-[10px] text-slate-400">正在同步...</span>
+            </div>
+            <div class="bg-slate-100 rounded-2xl p-2 max-h-40 overflow-y-auto space-y-1.5 text-xs" id="leaderboard-list"></div>
+        </div>
+
+        <button id="btn-restart-game" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base rounded-2xl shadow-lg transition transform active:scale-95">
+            再次挑戰 🔄
+        </button>
+    </div>
+</div>
+
+
+<!-- =====================================================
+     遊戲核心 JS 邏輯引擎 (單一街道版)
+===================================================== -->
+<script>
+
+// --- Web Audio 音效產生器 ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function playSound(type) {
+    try {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        if (type === 'shoot') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'extinguish') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.linearRampToValueAtTime(800, now + 0.15);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.setValueAtTime(100, now + 0.1);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now); osc.stop(now + 0.25);
+        } else if (type === 'deploy') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(500, now + 0.12);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+            osc.start(now); osc.stop(now + 0.12);
+        } else if (type === 'hit_base') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(120, now);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        }
+    } catch(e) { /* Audio fallback */ }
+}
+
+// --- 遊戲資料配置 ---
+const UNIT_TYPES = {
+    A:   { name: "水槍隊",    cost: 50,  icon: "💧", color: "sky",    effectiveVs: ["A"] },
+    B:   { name: "泡沫隊",    cost: 60,  icon: "🫧", color: "amber",  effectiveVs: ["B"] },
+    C:   { name: "CO2隊",     cost: 70,  icon: "💨", color: "indigo", effectiveVs: ["C"] },
+    D:   { name: "特種乾粉隊", cost: 80,  icon: "🧪", color: "purple", effectiveVs: ["D"] },
+    ABC: { name: "ABC萬能隊", cost: 110, icon: "🧯", color: "rose",   effectiveVs: ["A","B","C"] }
+};
+
+const FIRE_TYPES = {
+    A: { name: "A類 (木材/紙張)", icon: "🪵🔥", hp: 100, speed: 0.22, reward: 25 },
+    B: { name: "B類 (油類液體)", icon: "🛢️🔥", hp: 120, speed: 0.28, reward: 35 },
+    C: { name: "C類 (電氣火災)", icon: "⚡🔥", hp: 140, speed: 0.32, reward: 45 },
+    D: { name: "D類 (金屬火災)", icon: "⚙️🔥", hp: 180, speed: 0.20, reward: 60 }
+};
+
+// --- 遊戲狀態 ---
+let state = {
+    playerName: "小英雄",
+    gasUrl: localStorage.getItem("FIRE_TD_GAS_URL") || "",
+    baseHp: 100,
+    water: 150,
+    score: 0,
+    survivalSeconds: 0,
+    selectedUnit: null,
+    isGameRunning: false,
+    placedUnits: [],  // { id, lane:0, slot, type, lastShotTime }
+    fires: [],        // { id, lane:0, type, xPercent, hp, maxHp, speed }
+    bullets: [],      // { id, lane:0, xPercent, unitType }
+    timerInterval: null,
+    spawnInterval: null,
+    waterInterval: null,
+    animationFrameId: null
+};
+
+// --- DOM 元素 ---
+const hudWater    = document.getElementById('hud-water');
+const hudHpBar    = document.getElementById('hp-bar');
+const hudHpText   = document.getElementById('hp-text');
+const hudTimer    = document.getElementById('hud-timer');
+const hudScore    = document.getElementById('hud-score');
+const alertBanner = document.getElementById('alert-banner');
+const fireEntitiesLayer = document.getElementById('fire-entities-layer');
+const bulletLayer       = document.getElementById('bullet-layer');
+const floatTextLayer    = document.getElementById('float-text-layer');
+const levelBadge        = document.getElementById('level-badge');
+
+const modalStart    = document.getElementById('modal-start');
+const modalGasConfig= document.getElementById('modal-gas-config');
+const modalGameover = document.getElementById('modal-gameover');
+const inputPlayerName = document.getElementById('input-player-name');
+const inputGasUrl     = document.getElementById('input-gas-url');
+
+// ---- 單一街道防禦格初始化 (5格直式隊形) ----
+function initGridSlots() {
+    const container = document.getElementById('slots-lane-0');
+    container.innerHTML = '';
+    for (let slot = 0; slot < 5; slot++) {
+        const slotEl = document.createElement('div');
+        slotEl.className = 'defense-slot rounded-xl flex items-center justify-center cursor-pointer relative bg-white/60';
+        slotEl.style.cssText = '';
+        slotEl.dataset.lane = 0;
+        slotEl.dataset.slot = slot;
+        slotEl.addEventListener('click', () => handleSlotClick(0, slot, slotEl));
+        container.appendChild(slotEl);
+    }
+}
+
+// 選擇英雄卡片
+document.querySelectorAll('.hero-card').forEach(card => {
+    card.addEventListener('click', () => {
+        const unitType = card.dataset.unit;
+        if (state.selectedUnit === unitType) {
+            state.selectedUnit = null;
+            card.classList.remove('selected');
+        } else {
+            document.querySelectorAll('.hero-card').forEach(c => c.classList.remove('selected'));
+            state.selectedUnit = unitType;
+            card.classList.add('selected');
+            playSound('deploy');
+        }
+    });
+});
+
+// 點擊空位部署隊員
+function handleSlotClick(lane, slot, slotEl) {
+    if (!state.isGameRunning) return;
+    if (!state.selectedUnit) {
+        showAlert("請先點擊左側選擇要派出的消防隊員！");
+        return;
+    }
+    const unitInfo = UNIT_TYPES[state.selectedUnit];
+    if (state.water < unitInfo.cost) {
+        playSound('wrong');
+        showAlert("💰 金幣不足！請等待資源充填。");
+        return;
+    }
+    const existingIndex = state.placedUnits.findIndex(u => u.lane === lane && u.slot === slot);
+    if (existingIndex !== -1) {
+        showAlert("該位置已有隊員部署！");
+        return;
+    }
+    state.water -= unitInfo.cost;
+    updateHUD();
+
+    const newUnit = {
+        id: Date.now() + Math.random(),
+        lane: lane,
+        slot: slot,
+        type: state.selectedUnit,
+        lastShotTime: 0
+    };
+    state.placedUnits.push(newUnit);
+    renderUnitOnSlot(slotEl, newUnit);
+    playSound('deploy');
+
+    state.selectedUnit = null;
+    document.querySelectorAll('.hero-card').forEach(c => c.classList.remove('selected'));
+}
+
+function renderUnitOnSlot(slotEl, unit) {
+    const info = UNIT_TYPES[unit.type];
+    slotEl.innerHTML = `
+        <div class="flex flex-col items-center justify-center">
+            <span class="text-2xl">${info.icon}</span>
+            <span class="text-[8px] font-bold text-slate-600 bg-white/80 px-1 rounded leading-tight text-center">${info.name}</span>
+        </div>
+    `;
+    slotEl.classList.remove('defense-slot');
+    slotEl.classList.add('bg-blue-50/90', 'border-2', `border-${info.color}-400`);
+}
+
+// ---- 火苗生成 (單一街道 lane=0) ----
+function spawnFire() {
+    if (!state.isGameRunning) return;
+
+    let possibleTypes = ['A'];
+    if (state.survivalSeconds > 15) possibleTypes.push('B');
+    if (state.survivalSeconds > 30) possibleTypes.push('C');
+    if (state.survivalSeconds > 45) possibleTypes.push('D');
+
+    // 更新關卡顯示
+    if (state.survivalSeconds <= 15) levelBadge.textContent = 'Level: A';
+    else if (state.survivalSeconds <= 30) levelBadge.textContent = 'Level: AB';
+    else if (state.survivalSeconds <= 45) levelBadge.textContent = 'Level: ABC';
+    else levelBadge.textContent = 'Level: ABCD';
+
+    const randomType = possibleTypes[Math.floor(Math.random() * possibleTypes.length)];
+    const fireTemplate = FIRE_TYPES[randomType];
+
+    state.fires.push({
+        id: Date.now() + Math.random(),
+        lane: 0,  // 單一街道
+        type: randomType,
+        xPercent: 92,
+        hp: fireTemplate.hp,
+        maxHp: fireTemplate.hp,
+        speed: fireTemplate.speed + (Math.random() * 0.05)
+    });
+}
+
+// 顯示警告廣播
+function showAlert(msg) {
+    alertBanner.innerText = msg;
+    alertBanner.classList.remove('hidden');
+    setTimeout(() => alertBanner.classList.add('hidden'), 3000);
+}
+
+// ---- 主遊戲迴圈 ----
+// 街道Y位置：街道佔game-main高度的36-64%，街道中心≈50%
+// 火苗/子彈/浮動文字都相對於 game-main (float-text-layer absolute inset-0)
+const STREET_FIRE_Y  = 46;  // % of game-main height (火苗在街道中)
+const STREET_BULLET_Y = 50; // % of game-main height (子彈略低)
+const FLOAT_TEXT_Y   = 38;  // % of game-main height (浮動提示在街道上方)
+
+function gameLoop() {
+    if (!state.isGameRunning) return;
+    const now = Date.now();
+
+    // 1. 隊員自動射擊
+    state.placedUnits.forEach(unit => {
+        const firesInLane = state.fires.filter(f => f.lane === unit.lane && f.xPercent > 10);
+        if (firesInLane.length > 0 && (now - unit.lastShotTime > 1200)) {
+            unit.lastShotTime = now;
+            // 隊員直式排在街道左側，統一朝右側火場射擊
+            const slotX = 14;
+            state.bullets.push({
+                id: Date.now() + Math.random(),
+                lane: unit.lane,
+                xPercent: slotX,
+                unitType: unit.type
+            });
+            playSound('shoot');
+        }
+    });
+
+    // 2. 子彈移動與碰撞檢測
+    for (let i = state.bullets.length - 1; i >= 0; i--) {
+        const bullet = state.bullets[i];
+        bullet.xPercent += 2.5;
+
+        const targetFire = state.fires.find(f =>
+            f.lane === bullet.lane && Math.abs(f.xPercent - bullet.xPercent) < 4
+        );
+
+        if (targetFire) {
+            applyExtinguishEffect(bullet.unitType, targetFire);
+            state.bullets.splice(i, 1);
+            continue;
+        }
+        if (bullet.xPercent > 100) {
+            state.bullets.splice(i, 1);
+        }
+    }
+
+    // 3. 火苗移動與防線碰撞
+    for (let i = state.fires.length - 1; i >= 0; i--) {
+        const fire = state.fires[i];
+        fire.xPercent -= fire.speed;
+
+        if (fire.xPercent <= 8) {
+            state.baseHp -= 15;
+            playSound('hit_base');
+            showFloatingText("💥 社區受損 -15%", 10, FLOAT_TEXT_Y, "text-red-600");
+            state.fires.splice(i, 1);
+            updateHUD();
+
+            if (state.baseHp <= 0) {
+                endGame("防線已被火海突破！社區需要更好的消防部署！");
+                return;
+            }
+        }
+    }
+
+    // 4. 繪製畫面
+    renderEntities();
+    state.animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+// ---- 滅火相剋邏輯 ----
+function applyExtinguishEffect(unitType, fire) {
+    const unitInfo = UNIT_TYPES[unitType];
+    const isEffective = unitInfo.effectiveVs.includes(fire.type);
+
+    if (isEffective) {
+        const damage = 40;
+        fire.hp -= damage;
+        playSound('extinguish');
+        showFloatingText(`💦 -${damage} HP`, fire.xPercent, FLOAT_TEXT_Y, "text-sky-600");
+
+        if (fire.hp <= 0) {
+            const reward = FIRE_TYPES[fire.type].reward;
+            state.score += reward;
+            state.water += 15;
+            showFloatingText(`🏆 +${reward} 分!`, fire.xPercent, FLOAT_TEXT_Y - 8, "text-amber-500");
+            const index = state.fires.findIndex(f => f.id === fire.id);
+            if (index !== -1) state.fires.splice(index, 1);
+            updateHUD();
+        }
+    } else {
+        playSound('wrong');
+        fire.hp = Math.min(fire.hp + 20, fire.maxHp * 1.5);
+        fire.speed += 0.05;
+
+        let warnMsg = "";
+        if (unitType === 'A' && fire.type === 'B') {
+            warnMsg = "❌ 警告：⚠️ 派錯隊員，火勢暴走中！" + FIRE_TYPES[fire.type].name + " 用水会濺射！";
+        } else if (unitType === 'A' && fire.type === 'C') {
+            warnMsg = "❌ 警告：⚠️ 派錯隊員，火勢暴走中！用水滅電氣火災會觸電導電！";
+        } else if ((unitType === 'A' || unitType === 'C') && fire.type === 'D') {
+            warnMsg = "❌ 警告：⚠️ 派錯隊員，火勢暴走中！水/CO2遇金屬火災會爆燃！";
+        } else {
+            warnMsg = "❌ 警告：⚠️ 派錯隊員，火勢暴走中！" + UNIT_TYPES[unitType].name + " 專滅 " + unitInfo.effectiveVs.join("/") + " 類火災";
+        }
+
+        showAlert(warnMsg);
+        showFloatingText("😱 愈燒愈旺！", fire.xPercent, FLOAT_TEXT_Y, "text-rose-600");
+    }
+}
+
+// ---- 渲染火苗與子彈 ----
+function renderEntities() {
+    // 火苗
+    fireEntitiesLayer.innerHTML = '';
+    state.fires.forEach(fire => {
+        const fireTemplate = FIRE_TYPES[fire.type];
+        const fireEl = document.createElement('div');
+        fireEl.className = 'absolute flex flex-col items-center fire-anim';
+        fireEl.style.left = `${fire.xPercent}%`;
+        fireEl.style.top  = `${STREET_FIRE_Y}%`;
+        fireEl.style.transform = 'translateX(-50%)';
+
+        const hpPct = Math.max(0, (fire.hp / fire.maxHp) * 100);
+        fireEl.innerHTML = `
+            <div class="text-3xl filter drop-shadow-md">${fireTemplate.icon}</div>
+            <div class="w-10 bg-gray-300 h-1.5 rounded-full overflow-hidden border border-white mt-0.5">
+                <div class="bg-red-500 h-full" style="width:${hpPct}%"></div>
+            </div>
+            <div class="text-[8px] font-bold text-white bg-black/50 px-1 rounded mt-0.5">${fire.type}類</div>
+        `;
+        fireEntitiesLayer.appendChild(fireEl);
+    });
+
+    // 子彈
+    bulletLayer.innerHTML = '';
+    state.bullets.forEach(bullet => {
+        const unitInfo = UNIT_TYPES[bullet.unitType];
+        const bulletEl = document.createElement('div');
+        bulletEl.className = 'absolute text-xl bullet-anim';
+        bulletEl.style.left = `${bullet.xPercent}%`;
+        bulletEl.style.top  = `${STREET_BULLET_Y}%`;
+        bulletEl.style.transform = 'translateX(-50%)';
+        bulletEl.innerText = unitInfo.icon;
+        bulletLayer.appendChild(bulletEl);
+    });
+}
+
+// 浮動提示文字 (相對於 game-main 的 float-text-layer)
+function showFloatingText(text, x, y, colorClass) {
+    const el = document.createElement('div');
+    el.className = `floating-text ${colorClass} text-xs`;
+    el.style.left = `${x}%`;
+    el.style.top  = `${y}%`;
+    el.innerText = text;
+    floatTextLayer.appendChild(el);
+    setTimeout(() => el.remove(), 850);
+}
+
+function updateHUD() {
+    const playerName = document.getElementById('hud-player-name');
+    if (playerName) playerName.innerText = state.playerName;
+
+    const hpVal = Math.max(0, state.baseHp);
+    hudHpBar.style.width = `${hpVal}%`;
+    hudHpText.innerText  = `${hpVal}%`;
+    if (hpVal <= 30) {
+        hudHpBar.className = 'bg-red-500 h-full transition-all duration-300';
+    } else if (hpVal <= 60) {
+        hudHpBar.className = 'bg-amber-400 h-full transition-all duration-300';
+    } else {
+        hudHpBar.className = 'bg-emerald-400 h-full transition-all duration-300';
+    }
+
+    hudWater.innerText = state.water;
+    hudScore.innerText = state.score;
+
+    const score2 = document.getElementById('score-display2');
+    if (score2) score2.innerText = state.score;
+
+    const mins = String(Math.floor(state.survivalSeconds / 60)).padStart(2,'0');
+    const secs = String(state.survivalSeconds % 60).padStart(2,'0');
+    const timeStr = `${mins}:${secs}`;
+    hudTimer.innerText = timeStr;
+
+    const timer2 = document.getElementById('timer-display2');
+    if (timer2) timer2.innerText = timeStr;
+}
+
+function startGame() {
+    state.playerName = inputPlayerName.value.trim() || "小英雄";
+    state.baseHp = 100;
+    state.water  = 150;
+    state.score  = 0;
+    state.survivalSeconds = 0;
+    state.placedUnits = [];
+    state.fires   = [];
+    state.bullets = [];
+    state.isGameRunning = true;
+
+    modalStart.classList.add('hidden');
+    modalGameover.classList.add('hidden');
+    initGridSlots();
+    levelBadge.textContent = 'Level: A';
+    updateHUD();
+
+    // 定時器
+    state.timerInterval = setInterval(() => {
+        state.survivalSeconds++;
+        updateHUD();
+    }, 1000);
+
+    state.waterInterval = setInterval(() => {
+        state.water = Math.min(state.water + 15, 300);
+        updateHUD();
+    }, 2000);
+
+    state.spawnInterval = setInterval(() => {
+        spawnFire();
+    }, 3000);
+
+    gameLoop();
+}
+
+function endGame(reason) {
+    state.isGameRunning = false;
+    clearInterval(state.timerInterval);
+    clearInterval(state.waterInterval);
+    clearInterval(state.spawnInterval);
+    cancelAnimationFrame(state.animationFrameId);
+
+    fireEntitiesLayer.innerHTML = '';
+    bulletLayer.innerHTML = '';
+    floatTextLayer.innerHTML = '';
+
+    document.getElementById('gameover-reason').innerText = reason;
+
+    const mins = String(Math.floor(state.survivalSeconds / 60)).padStart(2,'0');
+    const secs = String(state.survivalSeconds % 60).padStart(2,'0');
+    const timeStr = `${mins}:${secs}`;
+    document.getElementById('final-time').innerText  = timeStr;
+    document.getElementById('final-score').innerText = state.score;
+
+    modalGameover.classList.remove('hidden');
+    handleLeaderboardSubmit(state.playerName, state.score, timeStr);
+}
+
+function handleLeaderboardSubmit(name, score, time) {
+    const syncStatus = document.getElementById('gas-sync-status');
+    const tag = document.getElementById('leaderboard-type-tag');
+
+    let localScores = JSON.parse(localStorage.getItem('FIRE_TD_SCORES') || '[]');
+    localScores.push({ name, score, time, date: new Date().toLocaleDateString() });
+    localScores.sort((a, b) => b.score - a.score);
+    localScores = localScores.slice(0, 10);
+    localStorage.setItem('FIRE_TD_SCORES', JSON.stringify(localScores));
+
+    if (state.gasUrl) {
+        syncStatus.innerText = "正在同步至 Google 試算表...";
+        tag.innerText = "Google 試算表連線";
+        fetch(state.gasUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, score, time })
+        })
+        .then(() => {
+            syncStatus.innerText = "✅ 已成功記錄至 GAS！";
+            fetchGasLeaderboard();
+        })
+        .catch(() => {
+            syncStatus.innerText = "⚠️ GAS 同步失敗，顯示本地紀錄";
+            renderLeaderboardList(localScores);
+        });
+    } else {
+        syncStatus.innerText = "使用本地儲存 (可點 Settings 設定 GAS)";
+        tag.innerText = "本地榜";
+        renderLeaderboardList(localScores);
+    }
+}
+
+function fetchGasLeaderboard() {
+    if (!state.gasUrl) return;
+    fetch(state.gasUrl)
+        .then(res => res.json())
+        .then(data => renderLeaderboardList(data))
+        .catch(() => {
+            const local = JSON.parse(localStorage.getItem('FIRE_TD_SCORES') || '[]');
+            renderLeaderboardList(local);
+        });
+}
+
+function renderLeaderboardList(list) {
+    const container = document.getElementById('leaderboard-list');
+    container.innerHTML = '';
+    if (!list || list.length === 0) {
+        container.innerHTML = '<div class="text-center text-slate-400 py-2">尚無資料</div>';
+        return;
+    }
+    list.forEach((item, idx) => {
+        const el = document.createElement('div');
+        el.className = 'flex justify-between items-center bg-white p-2 rounded-xl shadow-sm border border-slate-200';
+        let badge = `<span class="font-bold text-slate-500 w-5">${idx+1}.</span>`;
+        if (idx === 0) badge = `<span class="text-base">🥇</span>`;
+        if (idx === 1) badge = `<span class="text-base">🥈</span>`;
+        if (idx === 2) badge = `<span class="text-base">🥉</span>`;
+        el.innerHTML = `
+            <div class="flex items-center gap-2">
+                ${badge}
+                <span class="font-bold text-slate-800">${item.name}</span>
+            </div>
+            <div class="flex gap-3 text-slate-600 font-mono">
+                <span>⏱️ ${item.time}</span>
+                <span class="font-bold text-amber-500">🏆 ${item.score}分</span>
+            </div>
+        `;
+        container.appendChild(el);
+    });
+}
+
+// 顯示高分榜 (從遊戲中也可查看)
+function showHighScores() {
+    const localScores = JSON.parse(localStorage.getItem('FIRE_TD_SCORES') || '[]');
+    if (localScores.length === 0) {
+        showAlert("📋 尚無高分紀錄，快來創造第一筆！");
+        return;
+    }
+    // 暫時顯示 gameover modal 的排行
+    document.getElementById('gameover-reason').innerText = "📊 英雄榮譽榜 (點擊關閉可返回遊戲)";
+    document.getElementById('final-time').innerText = '-';
+    document.getElementById('final-score').innerText = '-';
+    document.getElementById('gas-sync-status').innerText = '';
+    document.getElementById('leaderboard-type-tag').innerText = '本地榜';
+    renderLeaderboardList(localScores);
+    modalGameover.classList.remove('hidden');
+}
+
+// 按鈕事件綁定
+document.getElementById('btn-start-game').addEventListener('click', startGame);
+document.getElementById('btn-restart-game').addEventListener('click', () => {
+    modalGameover.classList.add('hidden');
+    startGame();
+});
+document.getElementById('btn-gas-config').addEventListener('click', () => {
+    inputGasUrl.value = state.gasUrl;
+    modalGasConfig.classList.remove('hidden');
+});
+document.getElementById('btn-close-gas').addEventListener('click', () => {
+    modalGasConfig.classList.add('hidden');
+});
+document.getElementById('btn-save-gas').addEventListener('click', () => {
+    state.gasUrl = inputGasUrl.value.trim();
+    localStorage.setItem("FIRE_TD_GAS_URL", state.gasUrl);
+    modalGasConfig.classList.add('hidden');
+    showAlert("✅ Google Apps Script URL 設定已更新！");
+});
+document.getElementById('btn-highscores-header').addEventListener('click', showHighScores);
+
+// 讓支援 WebMCP 的瀏覽器可直接啟動同一個遊戲流程
+function registerGameTool() {
+    const context = document.modelContext;
+    if (!context || typeof context.registerTool !== 'function') return;
+    try {
+        Promise.resolve(context.registerTool({
+            name: 'start_fire_defense_game',
+            title: '開始淡水街頭滅火任務',
+            description: '以指定的消防隊長姓名開始一場新的街頭守衛遊戲。',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    playerName: { type: 'string', minLength: 1, maxLength: 20 }
+                },
+                required: ['playerName'],
+                additionalProperties: false
+            },
+            annotations: { readOnlyHint: false, untrustedContentHint: false },
+            execute(input) {
+                const name = input && typeof input.playerName === 'string' ? input.playerName.trim() : '';
+                if (!name || name.length > 20) throw new Error('請提供 1–20 個字的隊長姓名。');
+                inputPlayerName.value = name;
+                startGame();
+                return { status: 'started', playerName: state.playerName, level: 'A' };
+            }
+        })).catch(() => {});
+    } catch (_) {}
+}
+
+// 初始化
+window.addEventListener('DOMContentLoaded', () => {
+    initGridSlots();
+    registerGameTool();
+});
+</script>
+</body>
+</html>
