@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="橘貓快遞">
+  <title>橘貓快遞</title>
+  <!-- speed lines -->
+  <g stroke="#f7b267" stroke-width="9" stroke-linecap="round">
+    <path d="M14 118 H46"/><path d="M8 146 H40"/><path d="M20 174 H48"/>
+  </g>
+  <!-- ears -->
+  <path d="M62 92 L70 26 Q74 16 84 22 L124 60 Z" fill="#f08a24"/>
+  <path d="M194 92 L186 26 Q182 16 172 22 L132 60 Z" fill="#f08a24"/>
+  <path d="M74 78 L79 38 L108 64 Z" fill="#ffb3b8"/>
+  <path d="M182 78 L177 38 L148 64 Z" fill="#ffb3b8"/>
+  <!-- head -->
+  <ellipse cx="128" cy="130" rx="86" ry="76" fill="#f08a24"/>
+  <!-- forehead stripes -->
+  <g fill="#c9621a">
+    <path d="M128 56 q-7 0 -7 7 v18 q7 6 14 0 v-18 q0 -7 -7 -7Z"/>
+    <path d="M100 62 q-7 2 -5 9 l5 14 q7 3 11 -3 l-4 -15 q-2 -6 -7 -5Z"/>
+    <path d="M156 62 q7 2 5 9 l-5 14 q-7 3 -11 -3 l4 -15 q2 -6 7 -5Z"/>
+    <path d="M44 124 q12 -4 24 2 q-12 8 -24 6Z"/>
+    <path d="M212 124 q-12 -4 -24 2 q12 8 24 6Z"/>
+  </g>
+  <!-- muzzle -->
+  <ellipse cx="128" cy="158" rx="44" ry="30" fill="#fff4e6"/>
+  <!-- eyes -->
+  <g>
+    <ellipse cx="94" cy="122" rx="15" ry="18" fill="#2b1d14"/>
+    <ellipse cx="162" cy="122" rx="15" ry="18" fill="#2b1d14"/>
+    <circle cx="99" cy="114" r="6" fill="#fff"/>
+    <circle cx="167" cy="114" r="6" fill="#fff"/>
+    <circle cx="89" cy="130" r="3" fill="#fff"/>
+    <circle cx="157" cy="130" r="3" fill="#fff"/>
+  </g>
+  <!-- blush -->
+  <ellipse cx="66" cy="152" rx="13" ry="8" fill="#ff8f8f" opacity=".55"/>
+  <ellipse cx="190" cy="152" rx="13" ry="8" fill="#ff8f8f" opacity=".55"/>
+  <!-- nose + mouth -->
+  <path d="M120 142 h16 q2 0 0 3 l-6 6 q-2 2 -4 0 l-6 -6 q-2 -3 0 -3Z" fill="#ff7d8a"/>
+  <path d="M128 151 v5 q-6 9 -15 4 M128 156 q6 9 15 4" stroke="#2b1d14" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- whiskers -->
+  <g stroke="#2b1d14" stroke-width="3" stroke-linecap="round" opacity=".7">
+    <path d="M84 158 L50 152"/><path d="M84 166 L52 170"/>
+    <path d="M172 158 L206 152"/><path d="M172 166 L204 170"/>
+  </g>
+  <!-- love letter in mouth -->
+  <g transform="rotate(-10 150 196)">
+    <rect x="112" y="170" width="84" height="56" rx="7" fill="#ffffff" stroke="#e7d9c4" stroke-width="3"/>
+    <path d="M114 173 L154 204 L194 173" fill="none" stroke="#e7d9c4" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M154 216 c-12 -9 -15 -20 -7 -24 c4 -2 7 1 7 4 c0 -3 3 -6 7 -4 c8 4 5 15 -7 24Z" fill="#e2533f"/>
+  </g>
+  <!-- paws holding the letter -->
+  <g fill="#f6a95a">
+    <ellipse cx="112" cy="214" rx="17" ry="13"/>
+    <ellipse cx="196" cy="198" rx="17" ry="13"/>
+  </g>
+  <g stroke="#c9621a" stroke-width="3" stroke-linecap="round">
+    <path d="M107 208 v8"/><path d="M117 208 v8"/>
+    <path d="M191 192 v8"/><path d="M201 192 v8"/>
+  </g>
+</svg>
