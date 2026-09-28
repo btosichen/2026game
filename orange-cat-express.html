@@ -278,7 +278,7 @@ ensureThree(() => {
 // ====== 成績記錄設定 ======
 // 用 Apps Script 網址直接開遊戲時，這裡留空即可（會自動用 google.script.run 寫入）。
 // 如果把遊戲放在其他網站（例如 GitHub Pages），把 Apps Script「網頁應用程式」網址貼在這裡。
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzGiZbkKDgm6qtsom_Cp2D5t3cgjR5nQPab00SknLY9DLJA9RnEeKweOeSgpBTsy0zlUg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyQhlncy-BdGyFMe_ciNvqqKpcVRWqQLI3HuepLrrU60Pq-Kf8GfGDOCOKryxbmaUDVFQ/exec';
 // ==========================
 const $ = id => document.getElementById(id);
 if (!window.THREE) { showNoGL('lib'); return; }
@@ -741,8 +741,31 @@ function fetchBoard(ok, fail){
   const run = window.google && google.script && google.script.run;
   if (run){ google.script.run.withSuccessHandler(ok).withFailureHandler(e => fail(e && e.message ? e.message : String(e))).getLeaderboard(50); return; }
   if (!GAS_URL){ fail('排行榜要用 Apps Script 的遊戲網址開啟才看得到。這個預覽頁面連不到試算表。'); return; }
-  fetch(GAS_URL + (GAS_URL.includes('?') ? '&' : '?') + 'action=top&n=50')
-    .then(r => r.json()).then(ok).catch(() => fail('連不到排行榜，請稍後再按「重新整理」。'));
+  const url = GAS_URL + (GAS_URL.includes('?') ? '&' : '?') + 'action=top&n=50&t=' + Date.now();
+  const OLD = '讀到的不是排行榜資料，代表 Apps Script 上還是舊版程式。請把最新的 Code.gs 整份貼上、儲存，再到「部署 → 管理部署作業」按鉛筆，版本選「新版本」後部署。';
+  const NET = '連不到排行榜，請稍後再按「重新整理」。';
+  // 第一種方式：直接讀 JSON
+  fetch(url, { redirect:'follow' })
+    .then(r => r.text())
+    .then(txt => {
+      let data;
+      try { data = JSON.parse(txt); } catch(e) { throw new Error(/^\s*</.test(txt) ? 'OLD' : 'NET'); }
+      if (!data || !Array.isArray(data.top)) throw new Error(data && data.error ? 'NET' : 'OLD');
+      ok(data);
+    })
+    // 第二種方式（備用）：用 JSONP，不受跨網站限制影響
+    .catch(err => jsonp(url, ok, () => fail(err && err.message === 'OLD' ? OLD : NET)));
+}
+function jsonp(url, ok, fail){
+  const cb = 'catBoard_' + Date.now() + '_' + Math.floor(Math.random()*1e4);
+  const s = document.createElement('script');
+  let done = false;
+  const cleanup = () => { try { delete window[cb]; } catch(e) { window[cb] = undefined; } s.remove(); };
+  window[cb] = data => { done = true; cleanup(); if (data && Array.isArray(data.top)) ok(data); else fail(); };
+  s.onerror = () => { if (!done){ done = true; cleanup(); fail(); } };
+  setTimeout(() => { if (!done){ done = true; cleanup(); fail(); } }, 9000);
+  s.src = url + '&callback=' + cb;
+  document.head.appendChild(s);
 }
 let rankReturn = 'menu';
 function openRank(){
