@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>橘貓快遞</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{
+  --ink:#1b2427; --panel:#243135; --line:#34454a; --chalk:#f3f0e4; --muted:#9fb0ad;
+  --orange:#f08a24; --orange-d:#b9571a; --danger:#e2533f; --good:#6cc08b;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none !important}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  background:var(--ink); color:var(--chalk); margin:0;
+  font-family:"Chiron GoRound TC","PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+  display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box;
+  padding-inline:16px; padding-block:10px; gap:10px;
+}
+button{font-family:inherit}
+.hud{display:flex; flex-wrap:wrap; gap:8px 18px; align-items:center; justify-content:center; font-size:13px}
+.stat{display:flex; flex-direction:column; gap:3px; min-width:0}
+.stat label{font-size:11px; letter-spacing:.08em; color:var(--muted)}
+.stat b{font-size:18px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1}
+.meter{width:110px; height:9px; border-radius:5px; background:var(--line); overflow:hidden}
+.meter i{display:block; height:100%; width:0; background:var(--good)}
+#detFill{background:linear-gradient(90deg,#f2c14e,var(--danger))}
+#energyFill{background:var(--orange)}
+.tags{display:flex; gap:6px}
+.tag{font-size:12px; padding:3px 8px; border-radius:99px; border:1px solid var(--line); color:var(--muted)}
+.tag.on{border-color:var(--orange); color:var(--ink); background:var(--orange); font-weight:600}
+.paws{display:flex; gap:3px; height:18px; align-items:center}
+.paws svg{width:17px; height:17px; fill:var(--orange)}
+.paws svg.lost{fill:var(--line)}
+.iconbtn{background:var(--panel); color:var(--chalk); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:13px; cursor:pointer}
+.iconbtn:focus-visible,.btn:focus-visible,.pad:focus-visible{outline:2px solid var(--orange); outline-offset:2px}
+
+#stage{flex:1; min-height:0; position:relative}
+#box{position:absolute; inset:0; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px var(--line); background:#cfd8d3}
+canvas#cv{display:block; width:100%; height:100%; touch-action:none; cursor:crosshair}
+.layer{position:absolute; inset:0; pointer-events:none}
+
+/* first-person overlays */
+#vig{box-shadow:inset 0 0 0 0 rgba(226,83,63,0); transition:box-shadow .15s}
+#boxFrame{border:clamp(28px,7vw,70px) solid #b88b55; border-radius:12px; box-shadow:inset 0 0 0 6px #9c7141, inset 0 0 40px rgba(0,0,0,.35); opacity:0; transition:opacity .25s}
+#boxFrame.on{opacity:.93}
+#flash{background:#e2533f; opacity:0}
+#fp{display:flex; align-items:flex-end; justify-content:center}
+#fp svg{width:min(560px,100%); height:auto; display:block; transform:translateY(var(--bob,0px))}
+#reticle{left:50%; top:50%; width:14px; height:14px; margin:-7px 0 0 -7px; border:2px solid rgba(255,255,255,.8); border-radius:50%; position:absolute; box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+#compass{position:absolute; left:50%; top:12px; transform:translateX(-50%); display:flex; align-items:center; gap:8px; background:rgba(27,36,39,.72); border-radius:99px; padding:5px 12px 5px 6px; font-size:13px; font-weight:600; white-space:nowrap}
+#compass svg{width:26px; height:26px; transition:transform .08s linear}
+#mini{position:absolute; right:10px; top:10px; width:172px; height:115px; border-radius:8px; background:rgba(27,36,39,.72); box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+#toasts{position:absolute; left:0; right:0; top:34%; display:flex; flex-direction:column; align-items:center; gap:4px}
+.toast{font-size:20px; font-weight:800; padding:4px 12px; border-radius:8px; background:rgba(27,36,39,.75); animation:rise 1.2s ease-out forwards}
+@keyframes rise{from{transform:translateY(10px); opacity:0} 15%{opacity:1; transform:none} to{transform:translateY(-30px); opacity:0}}
+
+.ov{position:absolute; inset:0; display:grid; place-items:center; background:rgba(20,28,30,.6); padding:16px; box-sizing:border-box; overflow:auto}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 24px; max-width:430px; width:100%; box-sizing:border-box; display:flex; flex-direction:column; gap:12px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.4)}
+.card h1{margin:0; font-size:clamp(30px,6vw,46px); font-weight:800; color:var(--orange); letter-spacing:.04em; text-wrap:balance}
+.card h2{margin:0; font-size:26px; font-weight:800; text-wrap:balance}
+.card p{margin:0; line-height:1.6}
+.card .sub{color:var(--muted); font-size:13px}
+.eyebrow{font-size:12px; letter-spacing:.2em; color:var(--muted)}
+.keys{display:grid; grid-template-columns:auto 1fr; gap:6px 12px; text-align:left; font-size:13px; color:var(--muted); margin:0 auto}
+kbd{font-family:inherit; font-size:12px; background:var(--ink); color:var(--chalk); border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; padding:1px 6px}
+.btns{display:flex; gap:8px; justify-content:center; flex-wrap:wrap}
+.btn{background:var(--orange); color:#231406; border:0; border-radius:10px; padding:11px 22px; font-size:16px; font-weight:800; cursor:pointer}
+.btn.ghost{background:transparent; color:var(--chalk); border:1px solid var(--line); font-weight:600}
+.btn:hover{filter:brightness(1.07)}
+.count{font-size:64px; font-weight:800; color:var(--orange); line-height:1}
+.who{max-width:9em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--orange)}
+.field{display:flex; flex-direction:column; gap:6px; text-align:left}
+.field label{font-size:13px; font-weight:600}
+.field input{font:inherit; font-size:16px; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--ink); color:var(--chalk)}
+.field input:focus{outline:2px solid var(--orange); outline-offset:1px}
+.err{font-size:12px; color:#ff9a8a}
+.save{font-size:13px; margin:0; padding:8px 10px; border-radius:8px; background:var(--ink); color:var(--muted)}
+.board{display:flex; flex-direction:column; gap:6px; text-align:left}
+.board ol{margin:0; padding-left:1.6em; display:flex; flex-direction:column; gap:3px; font-size:14px; font-variant-numeric:tabular-nums}
+.board li.me{color:var(--orange); font-weight:800}
+.myrank{margin:0; font-size:15px; font-weight:800; color:var(--orange)}
+.card.wide{max-width:560px}
+.tablewrap{overflow-x:auto; max-height:min(52vh,420px); overflow-y:auto; border-radius:10px; border:1px solid var(--line)}
+.tablewrap table{width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; text-align:left}
+.tablewrap th{position:sticky; top:0; background:var(--ink); color:var(--muted); font-size:12px; font-weight:600; letter-spacing:.06em; padding:8px 10px; white-space:nowrap}
+.tablewrap td{padding:8px 10px; border-top:1px solid var(--line); white-space:nowrap}
+.tablewrap .num{text-align:right}
+.tablewrap td.name{max-width:10em; overflow:hidden; text-overflow:ellipsis; font-weight:600}
+.tablewrap tr.me td{background:rgba(240,138,36,.16); color:var(--orange); font-weight:800}
+.rk{display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; font-weight:800; font-size:13px; background:var(--line)}
+.rk.r1{background:#e8c14a; color:#231406}
+.rk.r2{background:#c9d1d3; color:#231406}
+.rk.r3{background:#c98a4f; color:#231406}
+.touchpads{display:none; gap:10px; justify-content:center}
+.pad{flex:1; max-width:200px; padding:14px; border-radius:12px; border:1px solid var(--line); background:var(--panel); color:var(--chalk); font-size:16px; font-weight:600; user-select:none; -webkit-user-select:none; touch-action:none}
+.pad.on{background:var(--orange); color:#231406}
+.touchhint{display:none}
+@media (pointer:coarse){ .touchpads{display:flex} .touchhint{display:block} .keys{display:none} }
+@media (max-width:560px){ .meter{width:78px} .stat b{font-size:16px} .hud{gap:6px 12px} #mini{width:120px; height:80px} #compass{top:8px; font-size:12px} }
+@media (prefers-reduced-motion:reduce){ .toast{animation-duration:.01s} #compass svg{transition:none} }
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="stat"><label>玩家</label><b id="who" class="who">—</b></div>
+  <div class="stat"><label>分數</label><b id="sc">0</b></div>
+  <div class="stat"><label>生命</label><div class="paws" id="lives"></div></div>
+  <div class="stat"><label>時間</label><b id="tm">01:30</b></div>
+  <div class="stat"><label id="detLabel">老師巡視中</label><div class="meter"><i id="detFill"></i></div></div>
+  <div class="stat"><label>任務進度</label><div class="meter"><i id="prog"></i></div></div>
+  <div class="stat"><label>魚乾能量</label><div class="meter"><i id="energyFill"></i></div></div>
+  <div class="tags"><span class="tag" id="shieldTag">毛線球</span><span class="tag" id="boxTag">紙箱</span></div>
+  <button class="iconbtn" id="muteBtn">音效：開</button>
+  <button class="iconbtn" id="pauseBtn">暫停</button>
+</div>
+
+<div id="stage">
+  <div id="box">
+    <canvas id="cv" aria-label="橘貓快遞第一人稱遊戲畫面"></canvas>
+    <div class="layer" id="vig"></div>
+    <div class="layer" id="boxFrame"></div>
+    <div class="layer" id="fp">
+      <svg viewBox="0 0 560 150" aria-hidden="true">
+        <g stroke="rgba(255,255,255,.75)" stroke-width="2" stroke-linecap="round" fill="none">
+          <path d="M215 110 Q150 96 70 102"/><path d="M215 120 Q150 120 80 132"/>
+          <path d="M345 110 Q410 96 490 102"/><path d="M345 120 Q410 120 480 132"/>
+        </g>
+        <g transform="translate(280 122) rotate(-4)">
+          <rect x="-34" y="-30" width="68" height="60" rx="3" fill="#fbfaf4" stroke="#d9d4c4"/>
+          <path d="M0 8 C-14 -2 -10 -16 0 -8 C10 -16 14 -2 0 8Z" fill="#e2533f"/>
+          <text x="0" y="24" text-anchor="middle" font-size="9" fill="#6b6255" font-family="Chiron GoRound TC, sans-serif">From: 我</text>
+        </g>
+        <path d="M232 150 Q240 112 280 108 Q320 112 328 150Z" fill="#f08a24"/>
+        <path d="M270 118 L280 126 L290 118Z" fill="#e8908a"/>
+        <g fill="#f08a24"><ellipse cx="60" cy="150" rx="62" ry="40"/><ellipse cx="500" cy="150" rx="62" ry="40"/></g>
+        <g fill="#f6b27a"><circle cx="38" cy="120" r="9"/><circle cx="60" cy="113" r="9"/><circle cx="83" cy="119" r="9"/>
+          <circle cx="477" cy="119" r="9"/><circle cx="500" cy="113" r="9"/><circle cx="522" cy="120" r="9"/></g>
+        <g stroke="#b9571a" stroke-width="5" stroke-linecap="round"><path d="M20 140 L34 128"/><path d="M540 140 L526 128"/></g>
+      </svg>
+    </div>
+    <div class="layer"><div id="reticle"></div></div>
+    <div id="compass"><svg viewBox="0 0 26 26" id="arrow"><circle cx="13" cy="13" r="12" fill="#f08a24"/><path d="M13 5 L19 17 L13 14 L7 17Z" fill="#231406"/></svg><span id="dist">小美的桌子</span></div>
+    <canvas id="mini" width="344" height="230"></canvas>
+    <div id="toasts" class="layer"></div>
+    <div class="layer" id="flash"></div>
+
+    <div class="ov" id="menu">
+      <div class="card">
+        <span class="eyebrow">第一人稱・偷傳紙條</span>
+        <h1>橘貓快遞</h1>
+        <p>你就是班上的橘貓小橘，嘴裡叼著紙條。趁老師不注意，飛到同學桌上！</p>
+        <div class="keys">
+          <span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></span><span>左右轉</span>
+          <span><kbd>W</kbd><kbd>S</kbd> / <kbd>↑</kbd><kbd>↓</kbd></span><span>爬升／俯衝</span>
+          <span>滑鼠</span><span>點一下畫面後，移動滑鼠看方向</span>
+          <span><kbd>SHIFT</kbd>　<kbd>SPACE</kbd></span><span>吃魚乾加速　慢速滑翔</span>
+          <span><kbd>P</kbd>　<kbd>M</kbd></span><span>暫停　靜音</span>
+        </div>
+        <p class="sub touchhint">用手指在畫面上拖曳就能轉頭、爬升或俯衝，下方按鈕可加速或慢飛。</p>
+        <p class="sub">躲在課本堆後面或飛到桌面底下，老師就看不到你。</p>
+        <div class="field">
+          <label for="nick">玩家暱稱</label>
+          <input id="nick" maxlength="12" placeholder="例如：七年三班小明" autocomplete="nickname">
+          <span class="err" id="nickErr" hidden>請先輸入暱稱再開始</span>
+        </div>
+        <div class="btns"><button class="btn" id="startBtn">開始任務</button><button class="btn ghost" id="menuRank">排行榜</button></div>
+        <span class="sub" id="bestTxt">最高分：0</span>
+      </div>
+    </div>
+
+    <div class="ov" id="intro" hidden>
+      <div class="card">
+        <span class="eyebrow" id="inSub">第 1 關</span>
+        <h2 id="inName">早自習</h2>
+        <p id="inGoal">把紙條送到小美的桌上</p>
+        <p class="sub" id="inTip"></p>
+        <div class="count" id="inCount">3</div>
+      </div>
+    </div>
+
+    <div class="ov" id="pause" hidden>
+      <div class="card">
+        <h2>暫停中</h2>
+        <div class="btns">
+          <button class="btn" id="resumeBtn">繼續</button>
+          <button class="btn ghost" id="retryBtn">重新開始本關</button>
+          <button class="btn ghost" id="homeBtn">回主選單</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ov" id="result" hidden>
+      <div class="card">
+        <span class="eyebrow" id="rsEye">任務完成</span>
+        <h2 id="rsTitle">紙條送達！</h2>
+        <p id="rsText"></p>
+        <p class="sub" id="rsNote"></p>
+        <p class="save" id="rsSave" hidden></p>
+        <div class="board" id="rsBoardWrap" hidden>
+          <p class="myrank" id="rsRank"></p>
+          <span class="eyebrow">目前前 5 名</span>
+          <ol id="rsBoard"></ol>
+        </div>
+        <div class="btns" id="rsBtns"></div>
+      </div>
+    </div>
+
+    <div class="ov" id="rank" hidden>
+      <div class="card wide">
+        <span class="eyebrow">全班成績・每人取最佳分數</span>
+        <h2>玩家排行榜</h2>
+        <p class="sub" id="rankMsg">載入中…</p>
+        <div class="tablewrap">
+          <table id="rankTable" hidden>
+            <thead><tr><th>名次</th><th>暱稱</th><th class="num">最佳分數</th><th class="num">通關</th><th class="num">次數</th><th>日期</th></tr></thead>
+            <tbody id="rankBody"></tbody>
+          </table>
+        </div>
+        <div class="btns"><button class="btn ghost" id="rankRefresh">重新整理</button><button class="btn" id="rankClose">關閉</button></div>
+      </div>
+    </div>
+
+    <div class="ov" id="noGL" hidden>
+      <div class="card">
+        <h2>無法載入 3D 畫面</h2>
+        <p id="noGLWhy"></p>
+        <p class="sub" id="noGLFix"></p>
+        <div class="btns"><button class="btn" id="noGLRetry">重新載入</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="touchpads">
+  <button class="pad" id="padSlow">慢飛</button>
+  <button class="pad" id="padBoost">加速</button>
+</div>
+
+<script>
+// 3D 程式庫：cdnjs 失敗時，自動改用其他來源
+function ensureThree(cb){
+  if (window.THREE) return cb();
+  const srcs = ['https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js', 'https://unpkg.com/three@0.128.0/build/three.min.js'];
+  let i = 0;
+  (function next(){
+    if (window.THREE || i >= srcs.length) return cb();
+    const s = document.createElement('script'); s.src = srcs[i++];
+    s.onload = () => cb(); s.onerror = next; document.head.appendChild(s);
+  })();
+}
+function showNoGL(kind, detail){
+  ['menu','intro','pause','result','rank'].forEach(k => { const el = document.getElementById(k); if (el) el.hidden = true; });
+  const why = document.getElementById('noGLWhy'), fix = document.getElementById('noGLFix');
+  if (kind === 'lib'){
+    why.textContent = '3D 程式庫下載失敗。';
+    fix.textContent = '請確認電腦有連上網路，而且學校網路沒有擋住 cdnjs.cloudflare.com、cdn.jsdelivr.net。換個網路（例如手機熱點）再試一次。';
+  } else {
+    why.textContent = '瀏覽器的 WebGL（3D 繪圖功能）沒有啟動。';
+    fix.textContent = 'Chrome／Edge：到「設定 → 系統」，打開「使用圖形加速功能（如果可用）」，然後完全關閉瀏覽器再重開。Safari：到「設定 → 進階」確認沒有停用 WebGL。' + (detail ? '（錯誤：' + detail + '）' : '');
+  }
+  document.getElementById('noGL').hidden = false;
+  document.getElementById('noGLRetry').onclick = () => location.reload();
+}
+function webglOK(){
+  try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl')); }
+  catch(e) { return false; }
+}
+</script>
+<script>
+ensureThree(() => {
+// ====== 成績記錄設定 ======
+// 用 Apps Script 網址直接開遊戲時，這裡留空即可（會自動用 google.script.run 寫入）。
+// 如果把遊戲放在其他網站（例如 GitHub Pages），把 Apps Script「網頁應用程式」網址貼在這裡。
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyQhlncy-BdGyFMe_ciNvqqKpcVRWqQLI3HuepLrrU60Pq-Kf8GfGDOCOKryxbmaUDVFQ/exec';
+// ==========================
+const $ = id => document.getElementById(id);
+if (!window.THREE) { showNoGL('lib'); return; }
+if (!webglOK()) { showNoGL('gl'); return; }
+
+// ---------- world constants (meters) ----------
+const RW = 9.6, RD = 6.4, CEIL = 3.0;
+const COLS = [1.5, 3.7, 5.9, 8.1], ROWS = [2.15, 3.2, 4.25, 5.3];
+const DESK_TOP = 0.76, CAT_R = 0.12, EYE = 1.6;
+
+// level data uses the classroom floor plan in centimeters
+const LEVELS = [
+  { sub:'第 1 關', name:'早自習', to:'小美', from:[0,3], target:[3,0], time:90,
+    tip:'跟著上方的橘色箭頭飛。躲在課本堆後面，老師的視線就穿不過來。',
+    books:[[1,1],[2,2],[2,0],[0,1]],
+    mops:[[260,420],[700,330],[480,480]],
+    fans:[],
+    fish:[[260,300],[480,270],[590,372],[700,480],[810,300]],
+    yarn:[[370,480]], boxes:[[700,267]],
+    teacher:{path:[[250,150],[710,150]], speed:.45, cone:3.0, half:.42, wait:1.6, rate:55} },
+  { sub:'第 2 關', name:'數學課', to:'阿凱', from:[3,3], target:[0,0], time:90,
+    tip:'吊扇會把小橘捲著轉圈，還會往下吹。飛到桌面底下也能躲老師。',
+    books:[[2,1],[1,2],[1,0],[3,1],[0,2]],
+    mops:[[480,300],[260,480],[700,230],[150,372]],
+    fans:[[480,425,1]],
+    fish:[[700,480],[590,270],[420,425],[260,372],[150,300]],
+    yarn:[[590,372]], boxes:[[260,267]],
+    teacher:{path:[[260,150],[260,600],[480,600],[480,150]], speed:.6, cone:3.2, half:.45, wait:1.2, rate:70} },
+  { sub:'第 3 關', name:'午休前', to:'班長', from:[0,0], target:[3,3], time:100,
+    tip:'老師會走遍每條走道，兩台吊扇的風向相反，小心被甩出去。',
+    books:[[1,0],[1,1],[2,1],[2,2],[3,2],[0,2]],
+    mops:[[260,320],[480,230],[590,480],[810,430],[370,580]],
+    fans:[[370,372,1],[700,300,-1]],
+    fish:[[260,230],[480,320],[590,380],[700,530],[370,480],[810,480]],
+    yarn:[[480,480]], boxes:[[590,267]],
+    teacher:{path:[[260,150],[260,600],[700,600],[700,150]], speed:.72, cone:3.4, half:.48, wait:1, rate:85} }
+];
+
+// ---------- helpers ----------
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const angDiff = (a,b) => { let d = a - b; while (d > Math.PI) d -= 2*Math.PI; while (d < -Math.PI) d += 2*Math.PI; return d; };
+const deskPos = ([c,r]) => ({ x:COLS[c], z:ROWS[r] });
+const aabb = (x0,y0,z0,x1,y1,z1) => ({ min:[x0,y0,z0], max:[x1,y1,z1] });
+function segBox(a, b, bx){
+  let t0 = 0, t1 = 1;
+  for (let i=0;i<3;i++){
+    const d = b[i] - a[i];
+    if (Math.abs(d) < 1e-9){ if (a[i] < bx.min[i] || a[i] > bx.max[i]) return false; }
+    else { let ta = (bx.min[i]-a[i])/d, tb = (bx.max[i]-a[i])/d; if (ta > tb) [ta,tb] = [tb,ta];
+      t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 > t1) return false; }
+  }
+  return true;
+}
+function sphBox(p, r, bx){
+  const c = [0,1,2].map(i => clamp(p[i], bx.min[i], bx.max[i]));
+  const d = Math.hypot(p[0]-c[0], p[1]-c[1], p[2]-c[2]);
+  return d < r ? { c, d } : null;
+}
+function pushOut(p, r, hit, bx){
+  if (hit.d > 1e-5){ for (let i=0;i<3;i++) p[i] = hit.c[i] + (p[i]-hit.c[i])/hit.d*r; }
+  else p[1] = bx.max[1] + r;
+}
+
+// ---------- three.js setup ----------
+const cv = $('cv');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas:cv, antialias:true }); }
+catch(e) {
+  // 顯示卡較舊時，關掉反鋸齒再試一次
+  try { renderer = new THREE.WebGLRenderer({ canvas:cv, antialias:false, powerPreference:'default', failIfMajorPerformanceCaveat:false }); }
+  catch(e2) { showNoGL('gl', e2 && e2.message); return; }
+}
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#dde5e0');
+scene.fog = new THREE.Fog('#dde5e0', 7, 15);
+const camera = new THREE.PerspectiveCamera(78, 1, 0.04, 40);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8d9384, 0.9));
+const sun = new THREE.DirectionalLight(0xfff1d6, 0.55); sun.position.set(-5, 7, 2); scene.add(sun);
+
+const mats = {};
+const lam = c => mats[c] || (mats[c] = new THREE.MeshLambertMaterial({ color:c }));
+const basic = c => new THREE.MeshBasicMaterial({ color:c });
+function box(w,h,d,mat,x,y,z,parent){ const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat); m.position.set(x,y,z); (parent||scene).add(m); return m; }
+function cyl(rt,rb,h,mat,x,y,z,parent,seg=16){ const m = new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg), mat); m.position.set(x,y,z); (parent||scene).add(m); return m; }
+function sph(r,mat,x,y,z,parent){ const m = new THREE.Mesh(new THREE.SphereGeometry(r,16,12), mat); m.position.set(x,y,z); (parent||scene).add(m); return m; }
+function canvasTex(w,h,draw){ const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; }
+function label(text, bg, fg, scale=1){
+  const tex = canvasTex(512, 128, (g,w,h) => {
+    g.font = '800 64px "Chiron GoRound TC", "PingFang TC", sans-serif';
+    const tw = g.measureText(text).width + 60; const x = (w - tw)/2;
+    g.fillStyle = bg; g.beginPath(); g.moveTo(x+30,10); g.arcTo(x+tw,10,x+tw,h-10,30); g.arcTo(x+tw,h-10,x,h-10,30); g.arcTo(x,h-10,x,10,30); g.arcTo(x,10,x+tw,10,30); g.fill();
+    g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w/2, h/2+4);
+  });
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, depthTest:false, transparent:true }));
+  s.scale.set(1.2*scale, .3*scale, 1); s.renderOrder = 10; return s;
+}
+
+// ---------- static classroom ----------
+const staticColliders = [], blockers = [];
+function buildRoom(){
+  // terrazzo floor with brass strips
+  const floorTex = canvasTex(1024, 683, (g,w,h) => {
+    g.fillStyle = '#c7cdc0'; g.fillRect(0,0,w,h);
+    let seed = 7; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+    const chips = ['#b1b8a7','#dde1d5','#9aa391','#e7e4d8','#a9ae9c'];
+    for (let k=0;k<9000;k++){ g.fillStyle = chips[k%5]; const s = 1.5 + rnd()*3; g.fillRect(rnd()*w, rnd()*h, s, s*(.6+rnd()*.6)); }
+    g.strokeStyle = 'rgba(150,125,70,.5)'; g.lineWidth = 2.5;
+    for (let x=0;x<=w;x+=w/6){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,h); g.stroke(); }
+    for (let y=0;y<=h;y+=w/6){ g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke(); }
+  });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(RW, RD), new THREE.MeshLambertMaterial({ map:floorTex }));
+  floor.rotation.x = -Math.PI/2; floor.position.set(RW/2, 0, RD/2); scene.add(floor);
+  box(RW, .05, RD, lam('#f2f0e8'), RW/2, CEIL, RD/2);
+  // walls: cream upper, green-grey lower (typical classroom paint)
+  const wall = lam('#ece7d6'), lower = lam('#9fb3a8');
+  box(RW,CEIL,.06, wall, RW/2,CEIL/2,-.03); box(RW,CEIL,.06, wall, RW/2,CEIL/2,RD+.03);
+  box(.06,CEIL,RD, wall, -.03,CEIL/2,RD/2); box(.06,CEIL,RD, wall, RW+.03,CEIL/2,RD/2);
+  box(RW,1,.02, lower, RW/2,.5,.01); box(.02,1,RD, lower, .01,.5,RD/2); box(.02,1,RD, lower, RW-.01,.5,RD/2);
+  // windows on the left wall
+  for (const z of [1.3, 3.1, 4.9]){
+    box(.03,1.3,1.4, lam('#6e7f78'), .02,1.85,z);
+    box(.035,1.18,1.28, basic('#d6ecf6'), .03,1.85,z);
+    box(.04,1.18,.04, lam('#6e7f78'), .035,1.85,z);
+  }
+  // door on the right wall
+  box(.04,2.1,1, lam('#8a6a45'), RW-.03,1.05,1.3);
+  // fluorescent tubes
+  for (const x of [2.2, 4.8, 7.4]) for (const z of [1.8, 3.6, 5.2]) box(1.2,.05,.1, basic('#fbfbf6'), x, CEIL-.05, z);
+  // chalkboard
+  box(7.3,1.3,.05, lam('#8a6a45'), 4.8,1.75,.03);
+  box(8,.06,.12, lam('#8a6a45'), 4.8,1.07,.08);
+  // teacher desk + lockers
+  box(1.7,.8,.5, lam('#7d5a37'), 4.8,.4,1.05);
+  box(.45,.03,.3, lam('#e6e0cc'), 4.5,.815,1.05);
+  box(.34,.05,.24, lam('#2f6f9f'), 5.05,.825,1.02);
+  staticColliders.push(aabb(3.95,0,.8, 5.65,.82,1.3)); blockers.push(staticColliders.at(-1));
+  box(RW,1,.3, lam('#6d7f86'), RW/2,.5,RD-.15);
+  for (let x=.3; x<RW; x+=.6) box(.52,.4,.02, lam('#5a6b72'), x,.72,RD-.31);
+  staticColliders.push(aabb(0,0,RD-.3, RW,1.02,RD));
+  // student desks & chairs
+  const wood = lam('#cfa46e'), woodD = lam('#a97c4b'), metal = lam('#56636a'), chairM = lam('#4f7483');
+  for (const x of COLS) for (const z of ROWS){
+    box(1.1,.04,.56, wood, x,DESK_TOP-.02,z);
+    box(1.0,.12,.46, woodD, x,.64,z-.02);
+    for (const [dx,dz] of [[-.5,-.24],[.5,-.24],[-.5,.24],[.5,.24]]) box(.035,.7,.035, metal, x+dx,.35,z+dz);
+    box(.44,.03,.4, chairM, x,.45,z+.48); box(.44,.34,.03, chairM, x,.66,z+.69);
+    for (const [dx,dz] of [[-.19,.3],[.19,.3],[-.19,.66],[.19,.66]]) box(.03,.45,.03, metal, x+dx,.22,z+dz);
+    const c = aabb(x-.55,.58,z-.28, x+.55,DESK_TOP,z+.28); staticColliders.push(c); blockers.push(c);
+  }
+}
+buildRoom();
+
+// chalkboard texture changes per level
+const boardCanvas = document.createElement('canvas'); boardCanvas.width = 1024; boardCanvas.height = 180;
+const boardTex = new THREE.CanvasTexture(boardCanvas);
+box(7.1,1.15,.02, new THREE.MeshLambertMaterial({ map:boardTex }), 4.8,1.75,.07);
+function drawBoard(L){
+  const g = boardCanvas.getContext('2d');
+  g.fillStyle = '#23443a'; g.fillRect(0,0,1024,180);
+  g.fillStyle = 'rgba(243,240,228,.85)'; g.font = '600 30px "Chiron GoRound TC", sans-serif'; g.textBaseline = 'middle';
+  g.fillText('9月28日　星期一', 40, 50);
+  g.fillText('今日：' + L.name, 420, 50);
+  g.fillText('值日生：座號 7、18', 720, 50);
+  g.font = '600 24px "Chiron GoRound TC", sans-serif'; g.fillStyle = 'rgba(243,240,228,.55)';
+  g.fillText('上課不准傳紙條！', 60, 128);
+  g.fillText('聯絡簿記得給家長簽名', 620, 128);
+  boardTex.needsUpdate = true;
+}
+
+// ---------- level objects ----------
+let levelGroup = new THREE.Group(); scene.add(levelGroup);
+let L, lvIdx = 0, start, target, startDist;
+let books, mops, fans, items, teacher, T;
+let targetRing, targetBeam, targetLabel, bubbleQ, bubbleE, cone, catShadow;
+
+function makeTeacher(parent){
+  const g = new THREE.Group(); parent.add(g);
+  cyl(.13,.15,.8, lam('#2f3a44'), 0,.4,0, g);
+  cyl(.2,.24,.62, lam('#3d5a80'), 0,1.13,0, g);
+  cyl(.06,.06,.5, lam('#3d5a80'), 0,1.15,.26, g).rotation.x = .2;
+  cyl(.06,.06,.5, lam('#3d5a80'), .1,1.15,-.26, g).rotation.x = -.2;
+  sph(.13, lam('#f1c9a5'), .02,1.56,0, g);
+  const hair = sph(.14, lam('#2b2522'), -.03,1.6,0, g); hair.scale.set(1,.95,1.02);
+  sph(.07, lam('#2b2522'), -.16,1.6,0, g);
+  box(.02,.03,.12, lam('#1b2427'), .145,1.58,0, g); // glasses
+  const stick = cyl(.012,.012,.9, lam('#8a6a45'), .45,1.1,-.26, g); stick.rotation.z = Math.PI/2.4;
+  // floor vision fan
+  const coneMat = new THREE.MeshBasicMaterial({ color:'#e2533f', transparent:true, opacity:.25, depthWrite:false, side:THREE.DoubleSide });
+  cone = new THREE.Mesh(new THREE.CircleGeometry(1, 40, -1, 2), coneMat);
+  cone.rotation.x = -Math.PI/2; cone.position.y = .015; g.add(cone);
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(.3, 24), new THREE.MeshBasicMaterial({ color:'#000', transparent:true, opacity:.18, depthWrite:false }));
+  shadow.rotation.x = -Math.PI/2; shadow.position.y = .012; g.add(shadow);
+  return g;
+}
+function makeItem(kind){
+  const g = new THREE.Group();
+  if (kind === 'fish'){
+    const body = sph(.1, lam('#c99357'), 0,0,0, g); body.scale.set(1.3,.55,.35);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(.07,.12,4), lam('#b3804a')); tail.rotation.z = Math.PI/2; tail.position.x = -.16; g.add(tail);
+    sph(.015, lam('#3a2a18'), .08,.02,.03, g);
+  } else if (kind === 'yarn'){
+    sph(.1, lam('#d96aa0'), 0,0,0, g);
+    for (let k=0;k<3;k++){ const t = new THREE.Mesh(new THREE.TorusGeometry(.1,.008,6,24), lam('#f6b5d3')); t.rotation.set(k,k*.8,0); g.add(t); }
+  } else {
+    box(.24,.2,.24, lam('#c49a63'), 0,0,0, g);
+    box(.245,.04,.245, lam('#e8d3ad'), 0,.02,0, g);
+  }
+  return g;
+}
+function loadLevel(i){
+  lvIdx = i; L = LEVELS[i];
+  scene.remove(levelGroup); levelGroup = new THREE.Group(); scene.add(levelGroup);
+  drawBoard(L);
+  start = deskPos(L.from); target = deskPos(L.target);
+  // books
+  books = L.books.map(d => {
+    const p = deskPos(d); const g = new THREE.Group(); levelGroup.add(g);
+    const cols = ['#2f6f9f','#c9493b','#e2b73f','#4c8c5a','#7a4f9a','#2f6f9f'];
+    cols.forEach((c,k) => { const b = box(.52 - (k%2)*.05, .075, .36, lam(c), p.x + (k%2 ? .02 : -.01), DESK_TOP + .04 + k*.08, p.z - .02, g); b.rotation.y = (k%3-1)*.06; });
+    return aabb(p.x-.29, DESK_TOP, p.z-.22, p.x+.29, DESK_TOP+.5, p.z+.18);
+  });
+  // mop buckets
+  mops = L.mops.map(([x,y]) => {
+    const X = x/100, Z = y/100;
+    cyl(.16,.13,.32, lam('#3b7fb0'), X,.16,Z, levelGroup);
+    cyl(.015,.015,1.5, lam('#b08a5a'), X,.85,Z, levelGroup);
+    cyl(.1,.06,.12, lam('#d9d4c4'), X,.36,Z, levelGroup);
+    return aabb(X-.16,0,Z-.16, X+.16,1.55,Z+.16);
+  });
+  // ceiling fans
+  fans = L.fans.map(([x,y,dir]) => {
+    const X = x/100, Z = y/100;
+    cyl(.02,.02,.3, lam('#5a6b72'), X,CEIL-.15,Z, levelGroup);
+    cyl(.1,.1,.08, lam('#5a6b72'), X,CEIL-.33,Z, levelGroup);
+    const blades = new THREE.Group(); blades.position.set(X, CEIL-.36, Z); levelGroup.add(blades);
+    for (let k=0;k<3;k++){ const b = box(.9,.012,.14, lam('#e4e6e0'), .5,0,0); const piv = new THREE.Group(); piv.rotation.y = k*Math.PI*2/3; piv.add(b); blades.add(piv); }
+    const ring = new THREE.Mesh(new THREE.RingGeometry(1.0,1.05,48), new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:.35, depthWrite:false }));
+    ring.rotation.x = -Math.PI/2; ring.position.set(X,.013,Z); levelGroup.add(ring);
+    return { x:X, z:Z, dir, r:1.05, blades };
+  });
+  // items
+  const heights = { fish:1.25, yarn:1.15, box:1.05 };
+  items = [];
+  for (const [k, list] of [['fish',L.fish],['yarn',L.yarn],['box',L.boxes]]) for (const [x,y] of list){
+    const m = makeItem(k); m.position.set(x/100, heights[k], y/100); levelGroup.add(m);
+    items.push({ kind:k, x:x/100, y:heights[k], z:y/100, mesh:m, got:false, ph:Math.random()*6 });
+  }
+  // target desk marker
+  targetRing = new THREE.Mesh(new THREE.TorusGeometry(.6,.03,8,48), basic('#f08a24'));
+  targetRing.rotation.x = -Math.PI/2; targetRing.position.set(target.x, DESK_TOP+.03, target.z); levelGroup.add(targetRing);
+  targetBeam = cyl(.45,.45,2.2, new THREE.MeshBasicMaterial({ color:'#f08a24', transparent:true, opacity:.14, depthWrite:false }), target.x, DESK_TOP+1.1, target.z, levelGroup, 32);
+  targetLabel = label(L.to + '的桌子', '#f08a24', '#231406'); targetLabel.position.set(target.x, 2.05, target.z); levelGroup.add(targetLabel);
+  // teacher
+  const tp = L.teacher.path.map(([x,y]) => [x/100, y/100]);
+  const mesh = makeTeacher(levelGroup);
+  cone.scale.set(L.teacher.cone, L.teacher.cone, 1);
+  cone.geometry.dispose(); cone.geometry = new THREE.CircleGeometry(1, 40, -L.teacher.half, L.teacher.half*2);
+  const tl = label('老師', 'rgba(27,36,39,.85)', '#f3f0e4', .8); tl.position.set(0, 2.0, 0); mesh.add(tl);
+  bubbleQ = label('?', '#f2c14e', '#1b2427', .8); bubbleQ.position.set(0, 2.3, 0); mesh.add(bubbleQ);
+  bubbleE = label('!', '#e2533f', '#ffffff', .8); bubbleE.position.set(0, 2.3, 0); mesh.add(bubbleE);
+  T = { x:tp[0][0], z:tp[0][1], i:1 % tp.length, wait:0, face:Math.PI/2, look:0, path:tp, mesh };
+  // cat shadow
+  catShadow = new THREE.Mesh(new THREE.CircleGeometry(.14, 20), new THREE.MeshBasicMaterial({ color:'#000', transparent:true, opacity:.25, depthWrite:false }));
+  catShadow.rotation.x = -Math.PI/2; levelGroup.add(catShadow);
+
+  resetCat();
+  startDist = Math.hypot(target.x-start.x, target.z-start.z);
+  timeLeft = L.time; det = 0; energy = 40; shield = false; boxT = 0; invuln = 0; lives = 3; levelStartScore = score;
+}
+
+// ---------- game state ----------
+let state = 'menu', score = 0, levelStartScore = 0, lives = 3, timeLeft = 90, det = 0;
+let cat, energy = 40, shield = false, boxT = 0, invuln = 0, seen = false, hiddenNow = false;
+let t = 0, introT = 0, flash = 0, shake = 0, speedNow = 1.5;
+let nickname = '', cleared = 0, playSec = 0;
+try { nickname = localStorage.getItem('catExpressNick') || ''; } catch(e) {}
+$('nick').value = nickname; $('who').textContent = nickname || '—';
+let best = 0;
+try { best = +localStorage.getItem('catExpressBest') || 0; } catch(e) {}
+$('bestTxt').textContent = '最高分：' + best;
+const keys = {}, pads = { boost:false, slow:false }, look = { dx:0, dy:0 };
+
+function resetCat(){
+  cat = { p:[start.x, DESK_TOP + .2, start.z - .02], yaw:Math.atan2(target.z-start.z, target.x-start.x), pitch:.08 };
+}
+
+// ---------- audio ----------
+let AC = null, muted = false;
+function tone(f1, f2, dur, type='sine', vol=.12, delay=0){
+  if (muted) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const s = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.setValueAtTime(f1, s); o.frequency.exponentialRampToValueAtTime(f2, s+dur);
+    g.gain.setValueAtTime(vol, s); g.gain.exponentialRampToValueAtTime(.001, s+dur);
+    o.connect(g).connect(AC.destination); o.start(s); o.stop(s+dur+.02);
+  } catch(e) {}
+}
+const sfx = {
+  meow(){ tone(520,880,.12,'triangle',.13); tone(880,420,.28,'triangle',.13,.11); },
+  fish(){ tone(700,1200,.1,'square',.06); },
+  item(){ tone(400,800,.12,'sine',.12); tone(800,1300,.14,'sine',.1,.1); },
+  hit(){ tone(220,90,.25,'sawtooth',.12); },
+  caught(){ tone(300,150,.2,'square',.1); tone(260,120,.35,'square',.1,.2); },
+  win(){ [523,659,784,1047].forEach((f,i)=>tone(f,f,.18,'triangle',.12,i*.12)); }
+};
+function toast(txt, color='#f3f0e4'){
+  const d = document.createElement('div'); d.className = 'toast'; d.style.color = color; d.textContent = txt;
+  $('toasts').appendChild(d); setTimeout(() => d.remove(), 1250);
+}
+
+// ---------- update ----------
+function update(dt){
+  t += dt;
+  if (state !== 'play') return;
+  timeLeft -= dt; playSec += dt;
+  if (timeLeft <= 0){ timeLeft = 0; return gameOver('下課鐘響了，紙條沒送到。'); }
+  invuln = Math.max(0, invuln - dt); boxT = Math.max(0, boxT - dt);
+  flash = Math.max(0, flash - dt); shake = Math.max(0, shake - dt);
+
+  // look & steer
+  let yawIn = 0, pitchIn = 0;
+  if (keys.ArrowLeft || keys.KeyA) yawIn -= 1;
+  if (keys.ArrowRight || keys.KeyD) yawIn += 1;
+  if (keys.ArrowUp || keys.KeyW) pitchIn += 1;
+  if (keys.ArrowDown || keys.KeyS) pitchIn -= 1;
+  cat.yaw += yawIn * 1.9 * dt + look.dx;
+  cat.pitch = clamp(cat.pitch + pitchIn * 1.3 * dt + look.dy, -.75, .6);
+  look.dx = look.dy = 0;
+  if (!pitchIn) cat.pitch *= (1 - dt*.6);
+
+  const boosting = (keys.ShiftLeft || keys.ShiftRight || pads.boost) && energy > 0;
+  const slow = keys.Space || pads.slow;
+  let sp = 1.5;
+  if (boosting){ sp = 2.7; energy = Math.max(0, energy - 32*dt); }
+  else if (slow) sp = .85;
+  speedNow += (sp - speedNow) * Math.min(1, dt*5);
+  const cp = Math.cos(cat.pitch);
+  let v = [Math.cos(cat.yaw)*cp*speedNow, Math.sin(cat.pitch)*speedNow - .12, Math.sin(cat.yaw)*cp*speedNow];
+  for (const f of fans){
+    const dx = cat.p[0]-f.x, dz = cat.p[2]-f.z, d = Math.hypot(dx,dz);
+    if (d < f.r && d > .01){ const k = (1 - d/f.r) * 1.5; v[0] += (-dz/d)*k*f.dir - dx/d*k*.15; v[2] += (dx/d)*k*f.dir - dz/d*k*.15; v[1] -= k*.35; }
+  }
+  const p = cat.p;
+  for (let i=0;i<3;i++) p[i] += v[i]*dt;
+  p[0] = clamp(p[0], .25, RW-.25); p[2] = clamp(p[2], .35, RD-.2); p[1] = clamp(p[1], .16, CEIL-.35);
+
+  // static (desks etc.): just slide off
+  for (const bx of staticColliders){ const h = sphBox(p, CAT_R, bx); if (h) pushOut(p, CAT_R, h, bx); }
+  for (const bx of books){ const h = sphBox(p, CAT_R, bx); if (h){ pushOut(p, CAT_R, h, bx); crash('撞到課本堆！'); if (state !== 'play') return; } }
+  for (const bx of mops){ const h = sphBox(p, CAT_R, bx); if (h){ pushOut(p, CAT_R, h, bx); crash('撞到拖把！'); if (state !== 'play') return; } }
+
+  // items
+  for (const it of items){
+    if (it.got || Math.hypot(p[0]-it.x, p[1]-it.y, p[2]-it.z) > .35) continue;
+    it.got = true; it.mesh.visible = false;
+    if (it.kind === 'fish'){ score += 10; energy = Math.min(100, energy + 28); toast('+10 小魚乾', '#ffd08a'); sfx.fish(); }
+    if (it.kind === 'yarn'){ shield = true; toast('拿到毛線球護盾', '#f2a3c8'); sfx.item(); }
+    if (it.kind === 'box'){ boxT = 4; toast('躲進紙箱 4 秒', '#e8c28e'); sfx.item(); }
+  }
+
+  // teacher
+  let want;
+  if (T.wait > 0){
+    T.wait -= dt; T.look += dt*1.7;
+    want = Math.atan2(3.7 - T.z, 4.8 - T.x) + Math.sin(T.look)*1.1;
+  } else {
+    const [px,pz] = T.path[T.i], dx = px-T.x, dz = pz-T.z, d = Math.hypot(dx,dz);
+    if (d < .02){ T.i = (T.i+1) % T.path.length; T.wait = L.teacher.wait; want = T.face; }
+    else { const s = Math.min(d, L.teacher.speed*dt); T.x += dx/d*s; T.z += dz/d*s; T.look += dt*1.3; want = Math.atan2(dz,dx) + Math.sin(T.look)*.6; }
+  }
+  if (det > 35) want = Math.atan2(p[2]-T.z, p[0]-T.x);
+  T.face += angDiff(want, T.face) * Math.min(1, dt*4);
+
+  // vision
+  const dx = p[0]-T.x, dz = p[2]-T.z, dist = Math.hypot(dx, dz);
+  const inCone = dist < L.teacher.cone && Math.abs(angDiff(Math.atan2(dz,dx), T.face)) < L.teacher.half;
+  const eye = [T.x, EYE, T.z];
+  const blocked = inCone && (books.some(b => segBox(eye, p, b)) || blockers.some(b => segBox(eye, p, b)));
+  hiddenNow = inCone && (blocked || boxT > 0);
+  seen = inCone && !blocked && boxT <= 0;
+  if (seen && invuln <= 0) det += L.teacher.rate * dt * (1 + (1 - dist/L.teacher.cone)*.8) * (boosting ? 1.3 : 1);
+  else det = Math.max(0, det - 22*dt);
+  if (dist < .38 && p[1] < 1.85 && invuln <= 0 && boxT <= 0) det = 100;
+  if (det >= 100) caught();
+  if (state !== 'play') return;
+
+  // goal
+  if (Math.hypot(p[0]-target.x, p[2]-target.z) < .5 && p[1] < 1.6) levelClear();
+}
+function crash(msg){
+  if (invuln > 0) return;
+  cat.yaw += Math.PI * .75;
+  if (shield){ shield = false; invuln = 1; toast('毛線球擋下了！', '#f2a3c8'); sfx.item(); return; }
+  lives--; invuln = 1.5; flash = .3; shake = .35; toast(msg, '#ff9a8a'); sfx.hit();
+  if (lives <= 0) gameOver('小橘撞到太多東西，累到趴下了。');
+}
+function caught(){
+  lives--; det = 0; flash = .4; shake = .3; sfx.caught(); toast('被老師發現了！', '#ff9a8a');
+  if (lives <= 0) return gameOver('老師把紙條沒收了。');
+  resetCat(); invuln = 2;
+}
+function levelClear(){
+  state = 'result'; unlock(); sfx.win(); sfx.meow();
+  const bonus = Math.round(timeLeft)*5 + lives*50 + 100;
+  score += bonus; cleared = lvIdx + 1; updateHud();
+  const lastLv = lvIdx === LEVELS.length - 1;
+  if (lastLv) saveBest();
+  showResult(lastLv ? '全部送達' : '任務完成', lastLv ? '三張紙條全部送達！' : '紙條送達！',
+    `小橘把紙條放到${L.to}的桌上了。本關加分 ${bonus}（剩餘時間 ×5、生命 ×50、送達 100）。`,
+    lastLv ? `總分 ${score}　最高分 ${best}` : `目前總分 ${score}`,
+    lastLv ? [['再玩一次', newGame], ['排行榜', openRank, true], ['回主選單', home, true]] : [['下一關', () => beginLevel(lvIdx+1)], ['回主選單', home, true]]);
+  if (lastLv) submitRecord('全部通關');
+}
+function gameOver(reason){
+  state = 'result'; unlock(); saveBest(); updateHud();
+  showResult('任務失敗', '紙條沒送到', reason, `總分 ${score}　最高分 ${best}`,
+    [['重玩這一關', () => { score = levelStartScore; beginLevel(lvIdx); }], ['從第 1 關開始', newGame, true], ['排行榜', openRank, true]]);
+  submitRecord('失敗');
+}
+
+// ---------- 成績記錄 ----------
+function submitRecord(resultText){
+  const rec = { nickname, score, cleared, result:resultText, level:L.name, seconds:Math.round(playSec) };
+  const st = $('rsSave'); st.hidden = false; $('rsBoardWrap').hidden = true;
+  const run = window.google && google.script && google.script.run;
+  if (run){
+    st.textContent = '成績記錄中…';
+    google.script.run
+      .withSuccessHandler(res => { st.textContent = `已記錄到試算表：${nickname}　${score} 分`; if (res) showBoard(res); })
+      .withFailureHandler(err => { st.textContent = '記錄失敗：' + (err && err.message ? err.message : err); })
+      .saveScore(rec);
+    return;
+  }
+  if (!GAS_URL){ st.textContent = '還沒設定成績記錄網址，這次成績沒有存到試算表。'; return; }
+  st.textContent = '成績記錄中…';
+  fetch(GAS_URL, { method:'POST', mode:'no-cors', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify(rec) })
+    .then(() => { st.textContent = `已送出成績：${nickname}　${score} 分`; setTimeout(() => fetchBoard(res => showBoard(res), () => {}), 1500); })
+    .catch(() => { st.textContent = '連不到試算表。請改用 Apps Script 的遊戲網址來玩，成績才能記錄。'; });
+}
+function showBoard(res){
+  const top = res.top || [];
+  const ol = $('rsBoard'); ol.innerHTML = '';
+  top.slice(0, 5).forEach(r => {
+    const li = document.createElement('li');
+    li.textContent = `${r.nickname}　${r.score} 分`;
+    if (r.nickname === nickname) li.className = 'me';
+    ol.appendChild(li);
+  });
+  const me = top.find(r => r.nickname === nickname);
+  const myRank = res.myRank || (me && me.rank);
+  $('rsRank').textContent = myRank ? `${nickname} 目前排第 ${myRank} 名（共 ${res.players || top.length} 位玩家）` : '';
+  $('rsRank').hidden = !myRank;
+  $('rsBoardWrap').hidden = top.length === 0;
+}
+
+// ---------- 排行榜 ----------
+function fetchBoard(ok, fail){
+  const run = window.google && google.script && google.script.run;
+  if (run){ google.script.run.withSuccessHandler(ok).withFailureHandler(e => fail(e && e.message ? e.message : String(e))).getLeaderboard(50); return; }
+  if (!GAS_URL){ fail('排行榜要用 Apps Script 的遊戲網址開啟才看得到。這個預覽頁面連不到試算表。'); return; }
+  fetch(GAS_URL + (GAS_URL.includes('?') ? '&' : '?') + 'action=top&n=50')
+    .then(r => r.json()).then(ok).catch(() => fail('連不到排行榜，請稍後再按「重新整理」。'));
+}
+let rankReturn = 'menu';
+function openRank(){
+  rankReturn = !$('result').hidden ? 'result' : 'menu';
+  show('rank'); $('rankClose').focus(); loadRank();
+}
+function loadRank(){
+  $('rankMsg').hidden = false; $('rankMsg').textContent = '載入中…';
+  fetchBoard(res => {
+    const top = res.top || [], body = $('rankBody'); body.innerHTML = '';
+    if (!top.length){ $('rankTable').hidden = true; $('rankMsg').textContent = '還沒有人留下成績，快來當第一名！'; return; }
+    top.forEach(r => {
+      const tr = document.createElement('tr'); if (r.nickname === nickname) tr.className = 'me';
+      const cells = [null, r.nickname, r.score, `${r.cleared}/3`, r.plays, r.date];
+      cells.forEach((v, i) => {
+        const td = document.createElement('td');
+        if (i === 0){ const b = document.createElement('span'); b.className = 'rk' + (r.rank <= 3 ? ' r' + r.rank : ''); b.textContent = r.rank; td.appendChild(b); }
+        else td.textContent = v;
+        if (i === 1) td.className = 'name';
+        if (i >= 2 && i <= 4) td.className = 'num';
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    $('rankTable').hidden = false;
+    $('rankMsg').textContent = `共 ${res.players || top.length} 位玩家，最後更新 ${new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })}`;
+  }, msg => { $('rankTable').hidden = true; $('rankMsg').textContent = msg; });
+}
+$('menuRank').onclick = openRank;
+$('rankRefresh').onclick = loadRank;
+$('rankClose').onclick = () => show(rankReturn);
+function saveBest(){ if (score > best){ best = score; try { localStorage.setItem('catExpressBest', best); } catch(e) {} } $('bestTxt').textContent = '最高分：' + best; }
+
+// ---------- HUD ----------
+const PAW = '<svg viewBox="0 0 20 20"><ellipse cx="10" cy="13" rx="5" ry="4.2"/><circle cx="4.3" cy="8" r="2.2"/><circle cx="8" cy="4.6" r="2.2"/><circle cx="12" cy="4.6" r="2.2"/><circle cx="15.7" cy="8" r="2.2"/></svg>';
+let lastLives = -1;
+function updateHud(){
+  $('sc').textContent = score;
+  if (lives !== lastLives){ $('lives').innerHTML = [0,1,2].map(i => i < lives ? PAW : PAW.replace('<svg', '<svg class="lost"')).join(''); lastLives = lives; }
+  const s = Math.ceil(timeLeft); $('tm').textContent = String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+  $('tm').style.color = timeLeft < 15 ? 'var(--danger)' : '';
+  $('detFill').style.width = det + '%';
+  $('detLabel').textContent = det > 60 ? '被盯上了！' : det > 5 ? '老師起疑了' : hiddenNow ? '躲得很好' : '老師巡視中';
+  const hd = Math.hypot(target.x-cat.p[0], target.z-cat.p[2]);
+  $('prog').style.width = (clamp(1 - hd/startDist, 0, 1)*100) + '%';
+  $('energyFill').style.width = energy + '%';
+  $('shieldTag').classList.toggle('on', shield);
+  $('boxTag').classList.toggle('on', boxT > 0);
+  $('boxTag').textContent = boxT > 0 ? '紙箱 ' + Math.ceil(boxT) + ' 秒' : '紙箱';
+  // compass
+  const rel = angDiff(Math.atan2(target.z-cat.p[2], target.x-cat.p[0]), cat.yaw);
+  $('arrow').style.transform = `rotate(${rel}rad)`;
+  $('dist').textContent = `${L.to}的桌子 ${hd.toFixed(1)} 公尺`;
+  // overlays
+  $('vig').style.boxShadow = `inset 0 0 ${60 + det}px ${det*.5}px rgba(226,83,63,${Math.min(.75, det/110)})`;
+  $('boxFrame').classList.toggle('on', boxT > 0);
+  $('flash').style.opacity = flash * 1.2;
+}
+
+// ---------- minimap ----------
+const mini = $('mini'), mg = mini.getContext('2d');
+function drawMini(){
+  const w = mini.width, h = mini.height, s = w / RW;
+  mg.clearRect(0,0,w,h);
+  mg.fillStyle = 'rgba(243,240,228,.08)'; mg.fillRect(0,0,w,h);
+  mg.fillStyle = '#35554a'; mg.fillRect(1.2*s, 0, 7.2*s, .12*s);
+  for (const x of COLS) for (const z of ROWS){ mg.fillStyle = 'rgba(207,164,110,.55)'; mg.fillRect((x-.55)*s, (z-.28)*s, 1.1*s, .56*s); }
+  mg.fillStyle = 'rgba(125,90,55,.8)'; mg.fillRect(3.95*s, .8*s, 1.7*s, .5*s);
+  mg.fillStyle = '#4f86b8'; for (const b of books) mg.fillRect(b.min[0]*s, b.min[2]*s, (b.max[0]-b.min[0])*s, (b.max[2]-b.min[2])*s);
+  mg.fillStyle = '#9cc7e0'; for (const m of mops){ mg.beginPath(); mg.arc((m.min[0]+.16)*s, (m.min[2]+.16)*s, 4, 0, 7); mg.fill(); }
+  mg.strokeStyle = 'rgba(255,255,255,.35)'; mg.lineWidth = 2; for (const f of fans){ mg.beginPath(); mg.arc(f.x*s, f.z*s, f.r*s, 0, 7); mg.stroke(); }
+  mg.fillStyle = '#ffd08a'; for (const it of items) if (!it.got){ mg.beginPath(); mg.arc(it.x*s, it.z*s, 3, 0, 7); mg.fill(); }
+  // target
+  mg.strokeStyle = '#f08a24'; mg.lineWidth = 3; mg.strokeRect((target.x-.6)*s, (target.z-.34)*s, 1.2*s, .68*s);
+  // teacher cone
+  mg.fillStyle = seen ? 'rgba(226,83,63,.55)' : 'rgba(226,83,63,.3)';
+  mg.beginPath(); mg.moveTo(T.x*s, T.z*s); mg.arc(T.x*s, T.z*s, L.teacher.cone*s, T.face-L.teacher.half, T.face+L.teacher.half); mg.closePath(); mg.fill();
+  mg.fillStyle = '#3d5a80'; mg.strokeStyle = '#f3f0e4'; mg.lineWidth = 2; mg.beginPath(); mg.arc(T.x*s, T.z*s, 7, 0, 7); mg.fill(); mg.stroke();
+  // cat
+  mg.save(); mg.translate(cat.p[0]*s, cat.p[2]*s); mg.rotate(cat.yaw);
+  mg.fillStyle = '#f08a24'; mg.strokeStyle = '#231406'; mg.lineWidth = 1.5;
+  mg.beginPath(); mg.moveTo(11,0); mg.lineTo(-7,-7); mg.lineTo(-3,0); mg.lineTo(-7,7); mg.closePath(); mg.fill(); mg.stroke();
+  mg.restore();
+}
+
+// ---------- render ----------
+function syncScene(){
+  // teacher
+  T.mesh.position.set(T.x, 0, T.z); T.mesh.rotation.y = -T.face;
+  cone.material.opacity = seen ? .42 : .22;
+  bubbleQ.visible = det > 5 && det <= 60; bubbleE.visible = det > 60;
+  // fans & items
+  for (const f of fans) f.blades.rotation.y -= .12 * f.dir;
+  for (const it of items) if (!it.got){ it.mesh.rotation.y = t*1.6 + it.ph; it.mesh.position.y = it.y + Math.sin(t*2.5 + it.ph)*.05; }
+  const pulse = (Math.sin(t*4)+1)/2;
+  targetRing.scale.setScalar(1 + pulse*.08); targetBeam.material.opacity = .08 + pulse*.12;
+  // cat shadow on the surface under the cat
+  let top = .012;
+  for (const bx of [...staticColliders, ...books]) if (cat.p[0] > bx.min[0] && cat.p[0] < bx.max[0] && cat.p[2] > bx.min[2] && cat.p[2] < bx.max[2] && bx.max[1] < cat.p[1]) top = Math.max(top, bx.max[1] + .005);
+  catShadow.position.set(cat.p[0], top, cat.p[2]);
+  catShadow.scale.setScalar(clamp(1.3 - (cat.p[1]-top)*.35, .5, 1.3));
+  // camera = cat's eyes
+  const sx = shake > 0 ? (Math.random()-.5)*shake*.15 : 0, sy = shake > 0 ? (Math.random()-.5)*shake*.15 : 0;
+  camera.position.set(cat.p[0] + sx, cat.p[1] + .04 + sy, cat.p[2]);
+  const cp = Math.cos(cat.pitch);
+  camera.lookAt(cat.p[0] + Math.cos(cat.yaw)*cp, cat.p[1] + .04 + Math.sin(cat.pitch), cat.p[2] + Math.sin(cat.yaw)*cp);
+  camera.rotation.z += (keys.ArrowLeft || keys.KeyA ? .06 : 0) - (keys.ArrowRight || keys.KeyD ? .06 : 0);
+  const bob = state === 'play' ? Math.sin(t*9)*3*(speedNow/1.5) : 0;
+  $('fp').style.setProperty('--bob', bob.toFixed(1) + 'px');
+  renderer.render(scene, camera);
+  drawMini();
+}
+function resize(){
+  const r = $('box').getBoundingClientRect();
+  renderer.setSize(Math.max(1, r.width), Math.max(1, r.height), false);
+  camera.aspect = r.width / Math.max(1, r.height);
+  camera.fov = camera.aspect < .9 ? 90 : 78;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+// ---------- flow ----------
+function show(id){ ['menu','intro','pause','result','rank'].forEach(k => $(k).hidden = k !== id); }
+function beginLevel(i){
+  loadLevel(i); updateHud();
+  $('inSub').textContent = L.sub; $('inName').textContent = L.name;
+  $('inGoal').textContent = `把紙條送到${L.to}的桌上`; $('inTip').textContent = L.tip;
+  state = 'intro'; introT = 3; $('inCount').textContent = '3'; show('intro');
+}
+function newGame(){ score = 0; cleared = 0; playSec = 0; beginLevel(0); }
+function home(){ state = 'menu'; score = 0; loadLevel(0); updateHud(); show('menu'); }
+function showResult(eye, title, text, note, btns){
+  $('rsEye').textContent = eye; $('rsTitle').textContent = title; $('rsText').textContent = text; $('rsNote').textContent = note;
+  $('rsSave').hidden = true; $('rsBoardWrap').hidden = true;
+  const bx = $('rsBtns'); bx.innerHTML = '';
+  btns.forEach(([lb, fn, ghost]) => { const b = document.createElement('button'); b.className = 'btn' + (ghost ? ' ghost' : ''); b.textContent = lb; b.onclick = fn; bx.appendChild(b); });
+  show('result'); bx.firstChild.focus();
+}
+function togglePause(){
+  if (state === 'play'){ state = 'pause'; unlock(); show('pause'); $('resumeBtn').focus(); }
+  else if (state === 'pause'){ state = 'play'; show(null); }
+}
+function unlock(){ try { if (document.pointerLockElement) document.exitPointerLock(); } catch(e) {} }
+
+function readNick(){
+  const v = $('nick').value.trim().slice(0, 12);
+  if (!v){ $('nickErr').hidden = false; $('nick').focus(); return false; }
+  nickname = v; $('nickErr').hidden = true; $('who').textContent = v;
+  try { localStorage.setItem('catExpressNick', v); } catch(e) {}
+  return true;
+}
+$('startBtn').onclick = () => { if (!readNick()) return; sfx.meow(); newGame(); };
+$('nick').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('startBtn').click(); });
+$('nick').addEventListener('input', () => { if ($('nick').value.trim()) $('nickErr').hidden = true; });
+$('resumeBtn').onclick = togglePause;
+$('retryBtn').onclick = () => { score = levelStartScore; beginLevel(lvIdx); };
+$('homeBtn').onclick = home;
+$('pauseBtn').onclick = togglePause;
+$('muteBtn').onclick = () => { muted = !muted; $('muteBtn').textContent = '音效：' + (muted ? '關' : '開'); };
+
+window.addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') return;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code) && state === 'play') e.preventDefault();
+  keys[e.code] = true;
+  if (e.code === 'KeyP' || (e.code === 'Escape' && state === 'pause')) togglePause();
+  if (e.code === 'KeyM') $('muteBtn').click();
+  if (e.code === 'KeyR' && state === 'pause') $('retryBtn').click();
+  if (e.code === 'Enter' && state === 'menu') $('startBtn').click();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (state === 'play') togglePause(); });
+
+// mouse look: pointer lock on desktop, drag everywhere else
+let drag = null;
+cv.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' && state === 'play' && cv.requestPointerLock){
+    try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch(_) {}
+  }
+  drag = { x:e.clientX, y:e.clientY, id:e.pointerId };
+  try { cv.setPointerCapture(e.pointerId); } catch(_) {}
+});
+cv.addEventListener('pointermove', e => {
+  if (state !== 'play') return;
+  if (document.pointerLockElement === cv){ look.dx += e.movementX*.0024; look.dy -= e.movementY*.0024; return; }
+  if (!drag || drag.id !== e.pointerId) return;
+  const k = e.pointerType === 'mouse' ? .005 : .007;
+  look.dx += (e.clientX - drag.x)*k; look.dy -= (e.clientY - drag.y)*k;
+  drag.x = e.clientX; drag.y = e.clientY;
+});
+['pointerup','pointercancel'].forEach(ev => cv.addEventListener(ev, () => drag = null));
+document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && state === 'play') togglePause(); });
+function bindPad(id, key){
+  const el = $(id);
+  el.addEventListener('pointerdown', e => { e.preventDefault(); pads[key] = true; el.classList.add('on'); });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev => el.addEventListener(ev, () => { pads[key] = false; el.classList.remove('on'); }));
+}
+bindPad('padBoost','boost'); bindPad('padSlow','slow');
+
+// ---------- loop ----------
+let last = performance.now(), hudT = 0;
+function frame(now){
+  const dt = Math.min(.05, (now - last)/1000); last = now;
+  if (state === 'intro'){
+    t += dt; introT -= dt;
+    const n = Math.ceil(introT); $('inCount').textContent = n > 0 ? n : '出發！';
+    if (introT <= -.4){ state = 'play'; show(null); sfx.meow(); }
+  } else if (state === 'play') update(dt);
+  else t += dt;
+  hudT += dt; if (hudT > .05 || state !== 'play'){ hudT = 0; updateHud(); }
+  syncScene();
+  requestAnimationFrame(frame);
+}
+
+loadLevel(0); resize(); updateHud();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawBoard(L));
+requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>
