@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#073d59">
+<title>Pixel Beach Rally</title>
+<style>
+  :root{color-scheme:dark;--ink:#09283a;--sun:#ff9d35;--wave:#38d4cf}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 8%,#24708b 0,#0a3c58 45%,#06283d 100%);color:#effcff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;display:grid;place-items:center;padding:20px}
+  .shell{width:min(100%,1100px)}
+  .top{display:flex;align-items:end;justify-content:space-between;gap:16px;margin:0 0 12px}
+  h1{font-size:clamp(18px,3vw,28px);margin:0;color:#fff3d1;letter-spacing:.06em;text-shadow:3px 3px #123b4b}
+  .tag{font-size:11px;color:#a9dce7;letter-spacing:.13em;text-transform:uppercase}
+  .stage{position:relative;border:5px solid #163c4d;border-radius:10px;overflow:hidden;box-shadow:0 18px 55px #001521aa,0 0 0 3px #55d1c6;line-height:0;background:#77c8d8}
+  canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
+  .overlay{position:absolute;inset:0;display:grid;place-items:center;background:#04283b99;line-height:1.4;transition:opacity .2s}
+  .overlay.hidden{opacity:0;pointer-events:none}
+  .card{background:#102f42ed;border:3px solid #ffca68;box-shadow:7px 7px #071a27a6;padding:22px 28px;text-align:center;max-width:90%}
+  .card h2{margin:0 0 8px;color:#ffe08e;font-size:clamp(17px,3vw,25px)}
+  .card p{margin:7px 0;color:#e1f6f3;font-size:12px;line-height:1.7}
+  button{font:inherit;font-weight:900;color:#133247;background:#ffd263;border:0;border-bottom:4px solid #b66d38;padding:10px 18px;cursor:pointer;letter-spacing:.08em}
+  button:hover{filter:brightness(1.1);transform:translateY(-1px)}
+  button:active{transform:translateY(2px);border-bottom-width:2px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+  .hint{font-size:12px;color:#d7eef2;line-height:1.6}
+  .hint b{color:#ffd263}
+  .tools{display:flex;gap:8px}
+  .tools button{font-size:11px;padding:8px 11px;border-bottom-width:3px}
+  .score-form{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:10px 0 2px}
+  .score-form[hidden]{display:none}
+  .score-form input{min-width:150px;max-width:210px;padding:9px 10px;border:2px solid #73d6d0;border-radius:3px;background:#071f2c;color:#fff;font:inherit;font-size:12px}
+  .score-form button{padding:9px 12px;font-size:11px}
+  .score-status{min-height:18px;color:#bdf7de!important;font-size:11px!important}
+  .leaderboard{margin-top:16px;padding:13px 16px;background:#0c3147;border:2px solid #39798a;border-radius:6px;box-shadow:0 7px 18px #00152166}
+  .leaderboard-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .leaderboard h2{margin:0;color:#ffe08e;font-size:14px;letter-spacing:.1em}
+  .leaderboard ol{margin:9px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 18px}
+  .leaderboard li{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:7px;align-items:center;padding:5px 7px;background:#123e53;color:#e5f8f6;font-size:11px}
+  .leaderboard li:nth-child(-n+3) .rank{color:#ffd263}
+  .rank{color:#89bbc7}.record-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.record-score{color:#ffbc55;font-weight:900}.record-time{grid-column:2/4;color:#9bc9d1;font-size:9px}
+  .leaderboard-status{font-size:10px;color:#a9dce7}
+  .mobile-controls{display:none;justify-content:space-between;margin-top:10px;gap:10px;user-select:none}
+  .pad{display:grid;grid-template-columns:repeat(3,45px);grid-template-rows:repeat(2,39px);gap:4px}
+  .pad button,.hit{padding:0;border:2px solid #a2e7e4;border-bottom:4px solid #168c92;background:#135c70;color:#eaffff;border-radius:5px;touch-action:none}
+  .pad button{font-size:16px}.pad .up{grid-column:2}.pad .left{grid-column:1;grid-row:2}.pad .down{grid-column:2;grid-row:2}.pad .right{grid-column:3;grid-row:2}
+  .hit{width:145px;font-size:13px;background:#c6542b;border-color:#ffcb76;border-bottom-color:#72331f}
+  @media(max-width:650px){body{padding:10px}.top{align-items:center}.tag{font-size:9px}.mobile-controls{display:flex}.row{align-items:flex-start}.hint{max-width:60%}.leaderboard ol{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="top"><h1>PIXEL BEACH RALLY</h1><div class="tag">2 vs 2 · Endless Rally</div></header>
+  <div class="stage">
+    <canvas id="game" width="384" height="216" aria-label="像素沙灘雙打遊戲畫面"></canvas>
+    <div class="overlay" id="overlay"><div class="card"><h2 id="overlayTitle">準備接發球！</h2><p id="overlayText">移動橘隊球員，抓準時機把球打回去。<br>先拿下 11 分，沙灘冠軍就是你！</p><div id="scoreForm" class="score-form" hidden><input id="playerName" type="text" maxlength="16" autocomplete="nickname" placeholder="輸入姓名或匿稱"><button id="saveScore">登錄分數</button></div><p id="scoreStatus" class="score-status" aria-live="polite"></p><button id="start">開始比賽 ▶</button></div></div>
+  </div>
+  <div class="row"><div class="hint"><b>移動</b> WASD / 方向鍵　<b>揮拍</b> 空白鍵 / Enter　<b>暫停</b> P</div><div class="tools"><button id="sound">♫ 音效：開</button><button id="restart">↻ 重來</button></div></div>
+  <section class="leaderboard" aria-label="遊戲排行榜"><div class="leaderboard-head"><h2>🏆 BEACH TOP 10</h2><span id="leaderboardStatus" class="leaderboard-status">載入排行榜中…</span></div><ol id="leaderboardList"></ol></section>
+  <div class="mobile-controls"><div class="pad"><button class="up" data-key="ArrowUp">▲</button><button class="left" data-key="ArrowLeft">◀</button><button class="down" data-key="ArrowDown">▼</button><button class="right" data-key="ArrowRight">▶</button></div><button class="hit" data-key="Space">揮拍擊球</button></div>
+</main>
+<script>
+(()=>{
+const c=document.getElementById('game'),g=c.getContext('2d'),overlay=document.getElementById('overlay'),title=document.getElementById('overlayTitle'),msg=document.getElementById('overlayText');
+g.imageSmoothingEnabled=false;
+const keys=new Set(), sun='#ff9838', wave='#38d7cf';
+const GAS_URL='https://script.google.com/macros/s/AKfycbzWvdo_vDvYhxC83YmaZAiMpfH0oFF9yHh87HqPvPJglC971fSQ9CZxBXBQkjKcoL00/exec';
+let running=false,paused=false,muted=false,score=[4,5],ball,players=[],parts=[],frames=0,shake=0,audio=null,lastTime=0;
+const rect=(x,y,w,h,col)=>{g.fillStyle=col;g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))};
+function init(){score=[4,5];players=[{x:130,y:164,team:0,user:true,vx:0,vy:0,pose:0},{x:82,y:151,team:0,user:false,vx:0,vy:0,pose:0},{x:248,y:151,team:1,user:false,vx:0,vy:0,pose:0},{x:294,y:164,team:1,user:false,vx:0,vy:0,pose:0}];parts=[];serve(1)}
+function serve(direction=1){ball={x:direction===1?252:126,y:119,z:15,vx:direction===1?-2.8:2.8,vy:direction===1?1:-1,vz:2.25,last:direction===1?1:0,fire:0};}
+function sky(){
+  rect(0,0,384,216,'#56bad1');rect(0,0,384,70,'#64cce0');rect(0,72,384,31,'#136886');rect(0,90,384,29,'#07516d');
+  // sun glow and blocky rays
+  rect(305,16,22,22,'#ffe791');rect(300,21,32,12,'#ffe791');rect(310,11,12,32,'#ffe791');rect(304,15,24,24,'#ffd65c');
+  for(let i=0;i<5;i++){let x=(i*91+frames*.22)%430-30,y=22+(i%3)*11;rect(x,y,25,5,'#c7f2eb');rect(x+5,y-4,13,4,'#d9fbef');rect(x+29,y+2,8,4,'#a7e5df')}
+  // distant boats, gulls and shimmer
+  rect(43,58,15,2,'#fff1c2');rect(49,49,2,9,'#fff1c2');rect(51,51,7,6,'#ff9c4a');rect(188,66,18,2,'#fff1c2');rect(196,56,2,10,'#fff1c2');rect(198,59,8,6,'#fff1c2');
+  for(let i=0;i<20;i++){let x=(i*23+frames*.7)%390;let y=77+(i%4)*8;rect(x,y,3+(i%3),1,i%2?'#5bd2d2':'#f8e9a6')}
+  for(let i=0;i<3;i++){let x=(i*126+frames*.6)%420-20,y=40+(i%2)*12;rect(x,y,5,1,'#234f6d');rect(x+5,y-2,5,1,'#234f6d');rect(x+10,y,4,1,'#234f6d')}
+}
+function scenery(){
+  sky();
+  // back fence and blue support ropes
+  rect(0,99,384,2,'#334e52');for(let x=7;x<384;x+=9){rect(x,96,1,24,'#477179');rect(x,98+(x%3),1,1,'#cce1cf')};
+  // colorful pennants
+  for(let i=0;i<12;i++){let x=10+i*31+(frames%24<12?0:2);rect(x,91,12,1,'#f7f0cf');rect(x+2,92,1,5,i%3===0?'#ff8150':i%3===1?'#ffe179':'#49d7cd');rect(x+3,95,1,3,i%2?'#ffe179':'#ff8150')}
+  // crowd silhouettes behind fence
+  for(let i=0;i<22;i++){let x=i*18+4,y=106+(i%3);let col=['#ffd0a0','#f5e3bb','#dca178','#f4bd71'][i%4];rect(x,y,5,5,col);rect(x-1,y+5,7,5,i%2?'#e95544':'#f2c342');if(i%6===1){rect(x-4,y-2,12,2,'#fff1ce');rect(x-2,y-4,8,2,'#fff1ce')}if(i%7===0){rect(x+6,y+3,2,7,'#ffdf70')}}
+  rect(24,106,15,1,'#fff4d7');rect(26,103,10,2,'#ff9a38');rect(29,104,4,1,'#ffc65c');rect(331,107,18,1,'#fff4d7');rect(334,104,11,2,'#45d5ce');rect(338,105,4,1,'#95f4dc');
+  // beach floor and 3/4 court
+  rect(0,120,384,96,'#f6d798');rect(0,128,384,4,'#f9e4b5');
+  // court shadow and boundary
+  rect(37,132,311,72,'#d49c59');rect(42,126,300,70,'#f4c87c');rect(42,126,300,2,'#fff2cf');rect(42,194,300,2,'#fff2cf');rect(42,126,2,70,'#fff2cf');rect(340,126,2,70,'#fff2cf');
+  rect(190,127,2,67,'#ffe7ab');rect(44,159,296,2,'#ffe7ab');
+  // net, post and ropes
+  rect(188,145,4,31,'#166277');rect(186,143,8,2,'#ffe3a0');rect(186,151,8,1,'#d9f3d6');rect(186,159,8,1,'#d9f3d6');rect(186,167,8,1,'#d9f3d6');rect(186,175,8,1,'#d9f3d6');rect(184,143,2,33,'#22576a');rect(194,143,2,33,'#22576a');rect(180,141,2,37,'#2da8ad');rect(198,141,2,37,'#2da8ad');
+  // footprints / grains
+  for(let i=0;i<38;i++){let x=(i*47+13)%380,y=126+(i*29)%84;if(x<39||x>346)rect(x,y,2,1,'#e9bd77')}
+  // blurred-style foreground props represented by chunky dark palm leaves
+  rect(0,122,10,40,'#a76542');for(let i=0;i<6;i++)rect(i*3,119+(i%2)*2,15-i,3,'#26796c');
+  rect(374,136,10,40,'#a76542');for(let i=0;i<6;i++)rect(368+i,128+(i%2)*2,16-i,3,'#26796c');
+  // foreground fan heads, cropped
+  rect(22,207,12,9,'#8c5746');rect(20,210,16,6,'#523c39');rect(350,208,13,8,'#9d6550');rect(348,212,17,4,'#573c39');
+  // scoreboard
+  rect(153,7,78,28,'#173c4a');rect(156,10,72,22,'#f3dca9');rect(159,12,28,4,'#fff0c2');rect(197,12,27,4,'#fff0c2');
+  g.font='bold 8px monospace';g.textAlign='center';g.fillStyle=sun;g.fillText(String(score[0]),173,27);g.fillStyle=wave;g.fillText(String(score[1]),210,27);rect(190,14,2,14,'#8d6d49');
+  // play calls in team colors, small dots not text
+  rect(160,30,3,2,sun);rect(220,30,3,2,wave);
+}
+function drawPlayer(p){
+  const x=Math.round(p.x),y=Math.round(p.y),body=p.team===0?'#f27e34':'#23bcb7',dark=p.team===0?'#a6412f':'#116a82',skin=p.team===0?'#ffc98b':'#f4bf8d';
+  const jump=p.pose>0?Math.sin(p.pose*Math.PI)*6:0;
+  // shadow
+  rect(x-7,y+1,15,3,'#b38a55');
+  // legs, shoes
+  rect(x-4,y-6-jump,3,7,'#234959');rect(x+2,y-6-jump,3,7,'#234959');rect(x-6,y,5,2,'#fff0c3');rect(x+1,y,6,2,'#fff0c3');
+  // torso and head
+  rect(x-7,y-18-jump,14,12,body);rect(x-8,y-18-jump,16,3,dark);rect(x-5,y-27-jump,10,9,skin);rect(x-6,y-29-jump,12,4,p.team===0?'#fff1d2':'#d9ffef');rect(x-5,y-26-jump,2,2,'#173448');rect(x+3,y-26-jump,2,2,'#173448');rect(x-2,y-21-jump,4,1,'#a4493b');
+  // arm, racket and team wrist band
+  const hitPose=frames%24<5&&p.pose>0;let rx=x+9+(hitPose?5:0),ry=y-16-jump-(hitPose?6:0);
+  rect(x+5,y-17-jump,5,3,skin);rect(rx,ry,2,10,'#67452f');rect(rx-4,ry-7,10,8,'#b97843');rect(rx-2,ry-5,6,4,'#e5cb9b');rect(rx+1,ry-3,2,2,p.team===0?'#f7a343':'#49e0d4');
+  if(p.user){rect(x-10,y-34-jump,20,2,'#fff3b1');rect(x-3,y-37-jump,6,3,'#ff8a30')}
+}
+function drawBall(){let sy=ball.y-ball.z;rect(ball.x-3,ball.y+2,6,2,'#bd8b53');rect(ball.x-2,sy-2,5,5,'#fff4c7');rect(ball.x-1,sy-1,2,2,ball.last===0?'#ffae44':'#5ce3d4');if(ball.fire>0){for(let i=1;i<5;i++)rect(ball.x+i*3*(ball.vx<0?1:-1),sy+1+(i%2),3,2,i%2?'#ff732e':'#ffe483')}}
+function draw(){g.clearRect(0,0,384,216);g.save();if(shake>0){g.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);shake*=.78;if(shake<.2)shake=0}scenery();for(const p of [...players].sort((a,b)=>a.y-b.y))drawPlayer(p);drawBall();for(const p of parts){rect(p.x,p.y,2,2,p.col)}g.restore();}
+function sound(freq=520,dur=.08,type='square',vol=.045){if(muted)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();let o=audio.createOscillator(),v=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(50,freq*.58),audio.currentTime+dur);v.gain.setValueAtTime(vol,audio.currentTime);v.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);o.connect(v);v.connect(audio.destination);o.start();o.stop(audio.currentTime+dur)}catch(e){}}
+let musicTimer=null,musicStep=0;function startMusic(){if(musicTimer)clearInterval(musicTimer);const tune=[523,659,784,659,587,698,880,698,523,659,784,988,880,784,659,587];musicTimer=setInterval(()=>{if(muted||!running||paused)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();let o=audio.createOscillator(),v=audio.createGain();o.type='square';o.frequency.value=tune[musicStep++%tune.length];v.gain.setValueAtTime(.012,audio.currentTime);v.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.17);o.connect(v);v.connect(audio.destination);o.start();o.stop(audio.currentTime+.17)}catch(e){}},250)}
+function hit(p,aim){ball.vx=(p.team===0?1:-1)*(2.25+Math.random()*.3);ball.vy=(aim-p.y)*.018+(Math.random()-.5)*.3;ball.vz=1.5+Math.random()*.35;ball.last=p.team;ball.fire=9;shake=1.8;for(let i=0;i<9;i++)parts.push({x:ball.x+(Math.random()-.5)*8,y:ball.y-ball.z+(Math.random()-.5)*8,vx:(Math.random()-.5)*1.2,vy:(Math.random()-.5)*1.2,col:p.team===0?(i%2?'#ffd765':'#ff773b'):(i%2?'#95fff0':'#39cfd2')});p.pose=1;sound(p.team===0?660:420,.11);}
+function point(team){score[team]++;sound(team===0?790:280,.22,'square',.06);if(score[0]>=11||score[1]>=11){running=false;title.textContent=score[0]>score[1]?'橘隊拿下冠軍！':'青隊逆轉勝！';msg.innerHTML=`最終比分　<span style="color:${sun}">${score[0]}</span> - <span style="color:${wave}">${score[1]}</span><br>輸入姓名或匿稱，登錄橘隊分數。`;document.getElementById('scoreForm').hidden=false;document.getElementById('scoreStatus').textContent='';document.getElementById('saveScore').disabled=false;document.getElementById('start').textContent='再玩一局 ▶';overlay.classList.remove('hidden')}else{serve(team===0?1:-1)}}
+function step(dt){frames++;const p=players[0],speed=1.3;
+  if(keys.has('ArrowLeft')||keys.has('KeyA'))p.x-=speed*dt;if(keys.has('ArrowRight')||keys.has('KeyD'))p.x+=speed*dt;if(keys.has('ArrowUp')||keys.has('KeyW'))p.y-=speed*.75*dt;if(keys.has('ArrowDown')||keys.has('KeyS'))p.y+=speed*.75*dt;p.x=Math.max(54,Math.min(169,p.x));p.y=Math.max(142,Math.min(185,p.y));
+  const mate=players[1];mate.x+=Math.sign(143-mate.x)*.22*dt;mate.y+=Math.sign(151-mate.y)*.2*dt;
+  const opp=players[2],opp2=players[3];for(const q of [opp,opp2]){if(ball.last===0){let tx=q===opp?Math.max(225,ball.x+10):Math.max(270,ball.x+24);q.x+=Math.sign(tx-q.x)*.65*dt;q.y+=Math.sign(ball.y-q.y)*.38*dt}else{q.x+=(q===opp?-.025:.025)*dt}}
+  for(const q of players){q.x=Math.max(q.team===0?52:211,Math.min(q.team===0?180:332,q.x));q.y=Math.max(140,Math.min(186,q.y));if(q.pose>0)q.pose-=.08*dt}
+  ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;ball.z+=ball.vz*dt;ball.vz-=.12*dt;if(ball.z<0){ball.z=0;ball.vz=Math.abs(ball.vz)*.55;ball.vx*=.89;ball.vy*=.7;for(let i=0;i<5;i++)parts.push({x:ball.x+(Math.random()-.5)*6,y:ball.y,vx:(Math.random()-.5)*.7,vy:-Math.random()*.6,col:'#ecd099'});sound(125,.045,'triangle',.025)}if(ball.fire>0)ball.fire-=dt;
+  // Player can hit with space/enter; generous racket reach.
+  if((keys.has('Space')||keys.has('Enter'))&&ball.last===1&&Math.hypot(ball.x-p.x,ball.y-p.y)<28&&ball.z<29){hit(p,Math.random()<.5?151:171);keys.delete('Space');keys.delete('Enter')}
+  // Auto doubles return from AI when ball enters racket range.
+  for(const q of players.slice(1)){if(q.team===ball.last)continue;if(Math.abs(ball.x-q.x)<12&&Math.abs(ball.y-q.y)<16&&ball.z<26){hit(q,q.team===0?152:164);break}}
+  // Ball lands, hits back wall, or goes out: award a point to the last hitter.
+  if(ball.x<36||ball.x>348||ball.y>200){point(ball.last)}
+  parts=parts.filter(a=>a.life===undefined||a.life-->0);for(const a of parts){a.x+=a.vx*dt;a.y+=a.vy*dt;a.vy+=.03*dt;a.life??=18;a.life-=dt}
+}
+function loop(t){let dt=Math.min(2,(t-lastTime)/16.67||1);lastTime=t;if(running&&!paused)step(dt);draw();requestAnimationFrame(loop)}
+function resetScoreForm(){document.getElementById('scoreForm').hidden=true;document.getElementById('playerName').value='';document.getElementById('scoreStatus').textContent='';document.getElementById('saveScore').disabled=false}
+function start(){init();resetScoreForm();running=true;paused=false;overlay.classList.add('hidden');lastTime=performance.now();sound(520,.12);startMusic()}
+document.getElementById('start').onclick=start;document.getElementById('restart').onclick=()=>{init();running=false;paused=false;resetScoreForm();title.textContent='準備接發球！';msg.innerHTML='移動橘隊球員，抓準時機把球打回去。<br>先拿下 11 分，沙灘冠軍就是你！';document.getElementById('start').textContent='開始比賽 ▶';overlay.classList.remove('hidden')};
+document.getElementById('sound').onclick=e=>{muted=!muted;e.currentTarget.textContent=muted?'♫ 音效：關':'♫ 音效：開';if(!muted)sound(580,.08)};
+function callGas(params){return new Promise((resolve,reject)=>{const cb='pbr_'+Date.now()+'_'+Math.floor(Math.random()*100000);const script=document.createElement('script');let done=false;const timer=setTimeout(()=>finish(new Error('連線逾時')),12000);function finish(error,data){if(done)return;done=true;clearTimeout(timer);delete window[cb];script.remove();if(error)reject(error);else resolve(data)}window[cb]=data=>data&&data.ok?finish(null,data):finish(new Error((data&&data.error)||'請求失敗'));const query=new URLSearchParams({...params,callback:cb,_:Date.now()});script.src=GAS_URL+'?'+query.toString();script.onerror=()=>finish(new Error('無法連線到排行榜，請稍後再試'));document.head.appendChild(script)})}
+function renderLeaderboard(entries){const list=document.getElementById('leaderboardList');list.replaceChildren();if(!entries||!entries.length){const li=document.createElement('li');li.textContent='目前還沒有紀錄，來搶下第一名！';list.appendChild(li);return}entries.forEach(item=>{const li=document.createElement('li');const rank=document.createElement('span');rank.className='rank';rank.textContent=String(item.rank).padStart(2,'0');const name=document.createElement('span');name.className='record-name';name.textContent=item.name;const scoreValue=document.createElement('strong');scoreValue.className='record-score';scoreValue.textContent=String(item.score)+' 分';const time=document.createElement('time');time.className='record-time';const date=new Date(item.recordedAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('zh-TW',{hour12:false});li.append(rank,name,scoreValue,time);list.appendChild(li)})}
+async function refreshLeaderboard(){const status=document.getElementById('leaderboardStatus');try{const data=await callGas({action:'leaderboard'});renderLeaderboard(data.entries);status.textContent='即時排行'}catch(error){status.textContent='暫時無法載入';console.warn('Leaderboard load failed:',error)}}
+document.getElementById('saveScore').onclick=async()=>{const input=document.getElementById('playerName'),status=document.getElementById('scoreStatus'),button=document.getElementById('saveScore'),name=input.value.trim();if(!name){status.textContent='請先輸入姓名或匿稱';input.focus();return}button.disabled=true;status.textContent='送出中…';try{const data=await callGas({action:'submit',name,score:score[0]});renderLeaderboard(data.entries);status.textContent='已登錄！橘隊分數 '+score[0]+' 分';}catch(error){status.textContent=error.message;button.disabled=false}};
+window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();if(e.code==='KeyP'&&running){paused=!paused;if(paused){title.textContent='暫停中';msg.textContent='海浪也趁機喘口氣。按 P 繼續比賽。';document.getElementById('start').textContent='繼續 ▶';overlay.classList.remove('hidden')}else overlay.classList.add('hidden')}if(e.code==='Enter'&&!running&&overlay.classList.contains('hidden')===false){start();return}keys.add(e.code)});window.addEventListener('keyup',e=>keys.delete(e.code));
+document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;const down=e=>{e.preventDefault();keys.add(k)};const up=e=>{e.preventDefault();keys.delete(k)};b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointerleave',up);b.addEventListener('pointercancel',up)});
+init();refreshLeaderboard();requestAnimationFrame(loop);
+})();
+</script>
+</body></html>
